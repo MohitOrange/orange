@@ -152,6 +152,8 @@ def ensure_on_path():
     # tell Windows the PATH changed, so new terminals see it
     ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x1A, 0, "Environment", 2, 5000, None)
     ui.ok(f"added the 'orange' command to your PATH ({folder})")
+    ui.info("new terminal windows will find 'orange'. to use it in THIS window right now, paste:")
+    print(f"      set PATH=%PATH%;{folder}")
     return True
 
 
