@@ -94,8 +94,65 @@ def cmd_install(_a):
         ui.ok("desktop window support found")
     else:
         ui.info("no desktop window support here — the Orange terminal will be used instead")
+    reopen = ensure_on_path()
     ui.ok(f"Orange {__version__} installed in {time.time() - t:.2f}s\n")
-    print("  next: type " + ui.bold_orange("orange") + " and press Enter to create your box\n")
+    if reopen:
+        print("  next: " + ui.bold("close this window, open a new terminal") + ", type "
+              + ui.bold_orange("orange") + " and press Enter\n")
+    else:
+        print("  next: type " + ui.bold_orange("orange") + " and press Enter to create your box\n")
+
+
+def _scripts_dirs():
+    import os
+    import site
+    import sysconfig
+
+    dirs = [sysconfig.get_path("scripts")]
+    for scheme in (f"{os.name}_user", "posix_user", "osx_framework_user"):
+        try:
+            dirs.append(sysconfig.get_path("scripts", scheme))
+        except KeyError:
+            pass
+    ver = f"Python{sys.version_info[0]}{sys.version_info[1]}"
+    base = site.getuserbase()
+    dirs += [os.path.join(base, ver, "Scripts"), os.path.join(base, "Scripts"), os.path.join(base, "bin")]
+    return [d for d in dict.fromkeys(dirs) if d]
+
+
+def ensure_on_path():
+    """Make sure the `orange` command can be found. Returns True if a new terminal is needed."""
+    import os
+    import shutil
+
+    if shutil.which("orange"):
+        ui.ok("'orange' command is ready")
+        return False
+    exe = "orange.exe" if os.name == "nt" else "orange"
+    folder = next((d for d in _scripts_dirs() if os.path.isfile(os.path.join(d, exe))), None)
+    if not folder:
+        ui.info("could not find the 'orange' command file. you can always run: python -m orange")
+        return False
+    if os.name != "nt":
+        ui.info(f"add this line to your ~/.bashrc or ~/.zshrc, then open a new terminal:")
+        print(f'      export PATH="{folder}:$PATH"')
+        return True
+    import ctypes
+    import winreg
+
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0,
+                        winreg.KEY_READ | winreg.KEY_WRITE) as key:
+        try:
+            current, kind = winreg.QueryValueEx(key, "Path")
+        except FileNotFoundError:
+            current, kind = "", winreg.REG_EXPAND_SZ
+        parts = [p for p in current.split(";") if p]
+        if folder.lower().rstrip("\\") not in [p.lower().rstrip("\\") for p in parts]:
+            winreg.SetValueEx(key, "Path", 0, kind, ";".join(parts + [folder]))
+    # tell Windows the PATH changed, so new terminals see it
+    ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x1A, 0, "Environment", 2, 5000, None)
+    ui.ok(f"added the 'orange' command to your PATH ({folder})")
+    return True
 
 
 def cmd_default(a):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "orange-box"
-version = "1.0.0"
+version = "1.0.1"
 description = "Orange: an encrypted computer inside your computer (CLI + desktop window)"
 readme = "README.md"
 requires-python = ">=3.8"

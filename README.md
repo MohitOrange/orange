@@ -40,11 +40,17 @@ install.bat
 pip install git+https://github.com/MohitOrange/orange.git
 ```
 
-Then finish setup:
+Then finish setup (this also adds the `orange` command to your PATH):
 
 ```bash
-orange install
+python -m orange install
 ```
+
+Close the terminal, open a new one, and `orange` works from anywhere.
+
+> **Windows: `'orange' is not recognized`?** Run `python -m orange install`
+> (or `py -m orange install`), then open a new cmd window. Updating later:
+> `pip install --upgrade git+https://github.com/MohitOrange/orange.git`
 
 ## Use it
 
