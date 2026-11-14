@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "orange-box"
-version = "1.0.1"
-description = "Orange: an encrypted computer inside your computer (CLI + desktop window)"
+version = "2.0.0"
+description = "Orange: an encrypted computer inside your computer, with its own desktop"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
@@ -16,3 +16,7 @@ orange = "orange.cli:main"
 
 [tool.setuptools]
 packages = ["orange"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+orange = ["web/*.html", "web/*.css", "web/*.svg", "web/js/*.js", "web/js/apps/*.js", "web/fonts/*"]

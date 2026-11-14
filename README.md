@@ -2,132 +2,149 @@
 
 **An encrypted computer inside your computer.**
 
-Like a hidden underground room under a house: Orange creates a locked, encrypted
-"box" on your computer. Only your name + password opens it. Inside you get a
-mini computer with folders, a file manager, a text editor, an image viewer and
-its own terminal. Outside the box, everything is unreadable ciphertext. Even the
-file names are hidden.
+Like a hidden room under a house: Orange creates a locked, encrypted "box" on
+your computer. Type `orange`, enter your name and password, and a whole desktop
+opens full screen, with its own apps, windows, search, terminal and lock screen.
+Close it and everything is sealed again. Outside the box, even the file names
+are unreadable.
 
-Works on **Windows (cmd / PowerShell)**, **Linux** and **macOS**.
+Works on **Windows**, **macOS** and **Linux**.
 
-```
-  ██████  ██████   █████  ███    ██  ██████  ███████
- ██    ██ ██   ██ ██   ██ ████   ██ ██       ██
- ██    ██ ██████  ███████ ██ ██  ██ ██   ███ █████
- ██    ██ ██   ██ ██   ██ ██  ██ ██ ██    ██ ██
-  ██████  ██   ██ ██   ██ ██   ████  ██████  ███████
-```
+![The Orange desktop](docs/screenshots/desktop.jpg)
+
+## What's inside
+
+- **Files**: browse, drag in files and whole folders from your computer (encrypted the moment they land), photo thumbnails, Quick Look with Space, rubber-band selection, rename, move, Trash with **Undo**, drag a file out to export it.
+- **Code**: an editor with syntax colours, line numbers, live Markdown/HTML preview, and **autosave + encryption as you type**.
+- **Terminal**: a shell that only touches the box: `ls`, `cd`, `tree`, `cat`, `echo > file`, `find`, `neofetch` and more.
+- **Lens**: photos (zoom, pan, rotate, use as wallpaper), video and music streamed straight from the encrypted box, PDFs.
+- **Settings**: Night/Daylight themes, six accent colours, moving wallpapers or your own photo, motion (Full/Calm/Off), sounds, auto-lock, password change, storage ring.
+
+![Files and Code side by side](docs/screenshots/files-and-code.jpg)
+
+## A different desktop, for good reasons
+
+| | Windows / macOS | Orange |
+|---|---|---|
+| Window controls | Top of the window | **Bottom**, on the Base bar, next to live status |
+| Right-click | A list | **Segments**: a radial menu, pick by direction |
+| Search | Press a key first | **Just type** anywhere (and it does maths) |
+| Apps | Taskbar / Dock at the bottom | **Rail** on the left + **Apps fan** from a corner |
+| Screen corners | One (or none) | **Four**, each with a job |
+| Notifications | Corner pop-ups | **The Pip**: a top-centre island with progress and Undo |
+| Deleting | "Are you sure?" | Instant, with **Undo** |
+| Saving | Save buttons | Saves and encrypts **while you type** |
+
+Every choice is explained, with the research behind it (Fitts's law, marking
+menus, the Doherty threshold and more), in **[docs/DESIGN.md](docs/DESIGN.md)**.
+
+![Segments](docs/screenshots/segments.jpg)
 
 ## Install
 
-Needs Python 3.8+.
-
-**Windows (cmd):** download/clone this repo, then double-click `install.bat`, or run:
-
-```bat
-install.bat
-```
-
-**Linux / macOS:**
+Needs Python 3.8+. On Windows and macOS, Microsoft Edge or Google Chrome is used
+to draw the desktop (Edge comes with Windows).
 
 ```bash
-./install.sh
+pip install --upgrade git+https://github.com/MohitOrange/orange.git
 ```
-
-**Or straight from GitHub with pip:**
-
-```bash
-pip install git+https://github.com/MohitOrange/orange.git
-```
-
-Then finish setup (this also adds the `orange` command to your PATH):
 
 ```bash
 python -m orange install
 ```
 
-Close the terminal, open a new one, and `orange` works from anywhere.
+`orange install` checks the encryption engine and adds the `orange` command to
+your PATH. Close the terminal and open a new one, then:
 
-> **Windows: `'orange' is not recognized`?** Run `python -m orange install`
-> (or `py -m orange install`), then open a new cmd window. Updating later:
-> `pip install --upgrade git+https://github.com/MohitOrange/orange.git`
-
-## Use it
-
-1. **Create your box.** Type `orange`. It asks for a name, a password and the
-   password again. Your encrypted box is created in about 0.1 seconds.
-2. **Open it.** Type `orange` again, enter your name and password. A window
-   opens: your mini computer.
-3. **Put things in.** Click **Upload files** or **Upload folder**. Files are
-   encrypted as they go in.
-4. **Work inside.** Double-click to open folders, edit text and code files
-   (Ctrl+S saves and re-encrypts), view images, rename, delete.
-5. **Take things out.** Select files and click **Export** to decrypt a copy to
-   your normal computer.
-6. **Lock.** Click **Lock** or close the window.
-
-No desktop (SSH, server)? You get the Orange terminal automatically, or use
-`orange --shell`:
-
-```
-orange@alex:/$ put C:\Users\me\project Projects
-orange@alex:/$ cd Projects/project
-orange@alex:/Projects/project$ ls
-orange@alex:/Projects/project$ get main.py C:\Users\me\Desktop
-orange@alex:/$ exit
+```bash
+orange
 ```
 
-Shell commands: `ls cd pwd tree mkdir rm mv cat write put get info passwd window clear exit`.
+The first time, it asks for a name, a password and the password again, and
+creates your box. After that, `orange` asks for your name and password and
+opens the desktop.
+
+> **Windows: `'orange' is not recognized`?** Open a *new* cmd window after
+> `python -m orange install`, or use `python -m orange` instead of `orange`.
+
+## Using the desktop
+
+| Do this | To |
+|---|---|
+| Click a Rail icon (left) | Open, switch to, or sink an app |
+| Throw the pointer into a **corner** | ↙ Apps · ↖ Overview · ↗ Today · ↘ Peek |
+| **Type** on the empty desktop, or Ctrl+K | Search apps, files, actions, or do maths |
+| **Right-click** anywhere | Segments (actions all around the pointer) |
+| Drop files **anywhere** | Encrypt them into your Inbox |
+| Click the **Pip** (top centre) | Today: calendar, switches, Lock, Shut down |
+| Alt+Q · Alt+M · Alt+Enter | Close · Sink · Fill the active window |
+| Alt+Shift+← / → | Snap the window left / right |
+| Ctrl+↑ | Overview of every window |
+| Ctrl+L | Lock (your key is wiped from memory) |
+| ? | All shortcuts |
+
+Closing the Orange window, choosing **Shut down**, or pressing Ctrl+C in the
+terminal locks the box. It also locks itself after 10 idle minutes (change this
+in Settings → Security).
 
 ## All commands
 
 | Command | What it does |
 |---|---|
-| `orange install` | Set up Orange and run the encryption self-test |
-| `orange` | First time: create a box. After that: log in and open the window |
-| `orange --shell` / `orange shell` | Log in and use the terminal instead of the window |
-| `orange window` | Log in and force the window |
-| `orange new` | Create another box (another user) |
+| `orange install` | Set up Orange, test the encryption, add `orange` to PATH |
+| `orange` | First time: create a box. After that: unlock it and open the desktop |
+| `orange --windowed` | Open the desktop in a window instead of full screen |
+| `orange --shell` | Use the box from the terminal only (great over SSH) |
+| `orange --classic` | The simple v1 window |
+| `orange new` | Create another box (another person) |
 | `orange list` | List the boxes on this computer |
 | `orange passwd` | Change a box's password |
 | `orange destroy` | Permanently delete a box |
 
 ## Security
 
-- **AES-256-GCM** encrypts every file (in 4 MB chunks) and the file list.
-  Any tampering is detected.
-- Your password goes through **scrypt** (N=2^15, r=8), so guessing is slow.
-  Three wrong tries per run, with growing delays.
+- **AES-256-GCM** encrypts every file (in 4 MB chunks), every file name, your
+  settings and the folder tree. Any tampering is detected.
+- Your password is stretched with **scrypt** (N=2^15, r=8), so guessing is slow.
 - A random master key encrypts the data. The password only unlocks that key,
-  so changing the password is instant.
-- Boxes are stored in `~/.orange` (`C:\Users\<you>\.orange` on Windows).
-  Set `ORANGE_HOME` to store them somewhere else, such as a USB drive.
+  so changing the password is instant. Locking wipes the key from memory.
+- The desktop is served only to your own computer (127.0.0.1) on a random port,
+  opened with a one-time secret. Other websites can't reach it (strict cookies,
+  host checks, a required header), and decrypted data is never written to the
+  browser cache.
+- Boxes live in `~/.orange` (`C:\Users\<you>\.orange` on Windows). Set
+  `ORANGE_HOME` to keep them somewhere else, such as a USB drive.
 - **There is no password recovery.** Forget the password and the data is gone.
-- Opening a file type Orange can't show itself (PDF, video…) makes a temporary
-  decrypted copy for your normal app. It is deleted when you lock the box.
 
 ## Development
 
 ```bash
 pip install -e . pytest
+```
+
+```bash
 pytest
 ```
 
-| File | Role |
+| Path | Role |
 |---|---|
 | `orange/crypto.py` | scrypt + AES-256-GCM |
-| `orange/vault.py` | The encrypted box: files, folders, import/export |
+| `orange/vault.py` | The encrypted box: files, folders, streaming and range reads |
+| `orange/server.py` | The local, locked-down server behind the desktop, and the app-window launcher |
+| `orange/web/` | The desktop: window manager, Segments, Pip, search, apps (no frameworks, works offline) |
 | `orange/cli.py` | The `orange` command |
-| `orange/shell.py` | The terminal inside the box |
-| `orange/gui.py` | The desktop window (Tkinter, no extra installs) |
-| `orange/ui.py` | Orange colours and banner |
+| `orange/shell.py` | The terminal-only mode |
+| `orange/gui.py` | The classic v1 window |
+
+Fonts: [Sora](https://github.com/sora-xor/sora-font) and
+[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), both under the SIL
+Open Font License (see `orange/web/fonts/LICENSE.txt`).
 
 ## Roadmap
 
-- Drag and drop into the window
-- Built-in terminal panel and code runner inside the window
-- Auto-lock after idle time
-- Sync a box to a USB drive or cloud
-- Orange Linux: the full operating system (Dev / Play / Sec modes)
+- **Orange Linux**: a bootable ISO that uses this desktop as its whole shell (Dev / Play / Sec modes)
+- Run code from the Code app, inside a sandbox
+- Sync a box to a USB drive or cloud storage
+- Multiple desktops and widgets
 
 MIT license.

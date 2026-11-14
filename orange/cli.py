@@ -64,18 +64,51 @@ def login_flow(name=None):
     sys.exit(1)
 
 
-def enter(box, mode):
+def _settings(box):
+    import json
+
+    try:
+        return json.loads(box.read_bytes("/.orange/settings.json"))
+    except (BoxError, ValueError):
+        return {}
+
+
+def _has_display():
+    import os
+
+    if sys.platform.startswith("linux"):
+        return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    return True
+
+
+def enter(box, mode, windowed=False):
     from .gui import gui_available, run_gui
     from .shell import run_shell
 
-    if mode == "shell" or (mode == "auto" and not gui_available()):
-        if mode == "auto":
+    if mode == "shell" or not _has_display():
+        if mode != "shell":
             ui.info("no desktop display found, opening the Orange terminal")
         run_shell(box)
-    else:
-        ui.info("opening your Orange window…  (close it to lock)")
+        return
+    if mode != "classic":
+        from .server import run_desktop
+
+        fullscreen = not windowed and _settings(box).get("immersive", True)
+
+        def ready(desk):
+            ui.ok("Orange desktop is open " + ui.dim(f"(local only, port {desk.port})"))
+            print("  " + ui.dim("close the Orange window, choose Shut down, or press Ctrl+C here to lock"))
+
+        if run_desktop(box, fullscreen=fullscreen, on_ready=ready):
+            ui.ok("box locked. see you soon")
+            return
+        ui.info("couldn't open the desktop, falling back")
+    if gui_available():
+        ui.info("opening the classic Orange window…  (close it to lock)")
         run_gui(box)
         ui.ok("box locked")
+    else:
+        run_shell(box)
 
 
 def cmd_install(_a):
@@ -89,11 +122,17 @@ def cmd_install(_a):
     key = derive_key("self-test", os.urandom(16))
     assert unseal(key, seal(key, b"orange")) == b"orange"
     ui.ok("encryption engine (scrypt + AES-256-GCM) self-test passed")
-    from .gui import gui_available
-    if gui_available():
-        ui.ok("desktop window support found")
+    from .server import find_browser
+
+    browser = find_browser()
+    if browser:
+        low = browser.lower()
+        name = next((n for k, n in (("edge", "Microsoft Edge"), ("brave", "Brave"), ("chromium", "Chromium"), ("chrome", "Google Chrome")) if k in low), os.path.basename(browser))
+        ui.ok(f"desktop engine: {name} (opens Orange as its own full-screen app)")
+    elif _has_display():
+        ui.info("no Edge or Chrome found: the Orange desktop will open in your default browser")
     else:
-        ui.info("no desktop window support here — the Orange terminal will be used instead")
+        ui.info("no screen here: the Orange terminal will be used instead")
     reopen = ensure_on_path()
     ui.ok(f"Orange {__version__} installed in {time.time() - t:.2f}s\n")
     if reopen:
@@ -164,9 +203,9 @@ def cmd_default(a):
         box = create_flow()
         print("\n  type " + ui.bold_orange("orange") + " again any time to open it\n")
         if input(ui.orange("  open your box now? [Y/n] ")).strip().lower() in ("", "y", "yes"):
-            enter(box, a.mode)
+            enter(box, a.mode, a.windowed)
         return
-    enter(login_flow(), a.mode)
+    enter(login_flow(), a.mode, a.windowed)
 
 
 def cmd_new(a):
@@ -181,7 +220,7 @@ def cmd_shell(a):
 
 def cmd_window(a):
     ui.banner()
-    enter(login_flow(), "window")
+    enter(login_flow(), "auto", a.windowed)
 
 
 def cmd_list(_a):
@@ -216,12 +255,15 @@ def main(argv=None):
     p = argparse.ArgumentParser(prog="orange", description="Orange — an encrypted computer inside your computer.")
     p.add_argument("--version", action="version", version=f"orange {__version__}")
     p.add_argument("--shell", dest="mode", action="store_const", const="shell", default="auto",
-                   help="use the terminal instead of the window")
+                   help="use the terminal instead of the desktop")
+    p.add_argument("--classic", dest="mode", action="store_const", const="classic",
+                   help="use the simple classic window")
+    p.add_argument("--windowed", action="store_true", help="open the desktop in a window, not full screen")
     sub = p.add_subparsers(dest="cmd")
     sub.add_parser("install", help="set up Orange on this computer")
     sub.add_parser("new", help="create another box")
     sub.add_parser("shell", help="unlock a box in the terminal")
-    sub.add_parser("window", help="unlock a box in the desktop window")
+    sub.add_parser("window", help="unlock a box and open the desktop")
     sub.add_parser("list", help="list boxes on this computer")
     sub.add_parser("passwd", help="change a box password")
     sub.add_parser("destroy", help="permanently delete a box")

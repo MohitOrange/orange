@@ -18,7 +18,9 @@ import posixpath
 import secrets
 import shutil
 import struct
+import threading
 import time
+from functools import wraps
 from pathlib import Path
 
 from .crypto import InvalidTag, derive_key, seal, unseal
@@ -80,6 +82,14 @@ def list_boxes():
     return out
 
 
+def _locked(fn):
+    @wraps(fn)
+    def inner(self, *a, **kw):
+        with self._mx:
+            return fn(self, *a, **kw)
+    return inner
+
+
 def norm(path, cwd="/"):
     p = posixpath.normpath(posixpath.join(cwd, path.replace("\\", "/")))
     p = "/" + p.lstrip("/")
@@ -94,6 +104,7 @@ class Box:
         self._key = master_key
         self.index = index  # {"dirs": [...], "files": {path: {id,size,mtime}}}
         self._dirs = set(index["dirs"])
+        self._mx = threading.RLock()
 
     # ---------- create / open ----------
     @classmethod
@@ -115,7 +126,7 @@ class Box:
         header.update(cls._wrap(master, password))
         index = {"dirs": ["/"], "files": {}}
         box = cls(d, header, master, index)
-        for folder in ("/Documents", "/Projects", "/Pictures", "/Downloads"):
+        for folder in ("/Inbox", "/Documents", "/Projects", "/Pictures", "/Downloads"):
             box.mkdir(folder, save=False)
         box.save_index()
         _atomic_write(d / "box.json", json.dumps(header, indent=2).encode())
@@ -152,11 +163,13 @@ class Box:
         self.header.update(self._wrap(self._key, new_password))
         _atomic_write(self.path / "box.json", json.dumps(self.header, indent=2).encode())
 
+    @_locked
     def lock(self):
         self._key = None
         self.index = {"dirs": [], "files": {}}
         self._dirs = set()
 
+    @_locked
     def save_index(self):
         self.index["dirs"] = sorted(self._dirs)
         data = json.dumps(self.index, separators=(",", ":")).encode()
@@ -176,6 +189,7 @@ class Box:
     def exists(self, p):
         return self.is_dir(p) or self.is_file(p)
 
+    @_locked
     def listdir(self, p="/"):
         p = norm(p)
         if p not in self._dirs:
@@ -192,14 +206,21 @@ class Box:
         items.sort(key=lambda i: (not i["dir"], i["name"].lower()))
         return items
 
+    @_locked
     def walk_files(self, p):
         prefix = norm(p).rstrip("/") + "/"
         return [f for f in self.files if f.startswith(prefix)]
 
+    @_locked
+    def all_dirs(self):
+        return sorted(self._dirs)
+
+    @_locked
     def usage(self):
         return len(self.files), sum(m["size"] for m in self.files.values())
 
     # ---------- folders ----------
+    @_locked
     def mkdir(self, p, save=True):
         p = norm(p)
         if p in self.files:
@@ -226,7 +247,6 @@ class Box:
         p = norm(p)
         if p in self._dirs:
             raise BoxError(f"{p} is a folder")
-        self.mkdir(posixpath.dirname(p), save=False)
         blob_id = secrets.token_hex(16)
         size, i = 0, 0
         tmp = self._blob(blob_id).with_suffix(".tmp")
@@ -246,10 +266,15 @@ class Box:
                     break
                 chunk = nxt
         os.replace(tmp, self._blob(blob_id))
-        old = self.files.get(p)
-        self.files[p] = {"id": blob_id, "size": size, "mtime": int(time.time())}
-        if save:
-            self.save_index()
+        with self._mx:
+            if p in self._dirs:
+                self._blob(blob_id).unlink(missing_ok=True)
+                raise BoxError(f"{p} is a folder")
+            self.mkdir(posixpath.dirname(p), save=False)
+            old = self.files.get(p)
+            self.files[p] = {"id": blob_id, "size": size, "mtime": int(time.time())}
+            if save:
+                self.save_index()
         if old:
             self._blob(old["id"]).unlink(missing_ok=True)
         return size
@@ -286,6 +311,30 @@ class Box:
                 if final:
                     return
                 i += 1
+
+    def read_range(self, p, start, end):
+        """Yield the plaintext bytes start..end (inclusive), decrypting only the chunks needed."""
+        p = norm(p)
+        meta = self.files.get(p)
+        if not meta:
+            raise BoxError(f"no such file: {p}")
+        size, blob_id = meta["size"], meta["id"]
+        if size == 0 or start > end:
+            return
+        chunks = max(1, -(-size // CHUNK))
+        first, last = start // CHUNK, min(end // CHUNK, chunks - 1)
+        record = 4 + 12 + CHUNK + 16
+        with open(self._blob(blob_id), "rb") as f:
+            f.seek(4 + first * record)
+            for i in range(first, last + 1):
+                n = struct.unpack(">I", f.read(4))[0]
+                try:
+                    data = unseal(self._key, f.read(n), self._aad(blob_id, i, 1 if i == chunks - 1 else 0))
+                except InvalidTag:
+                    raise BoxError("file failed integrity check (tampered?)") from None
+                lo = start - i * CHUNK if i == first else 0
+                hi = end - i * CHUNK + 1 if i == last else len(data)
+                yield data[lo:hi]
 
     def read_bytes(self, p):
         return b"".join(self.read_iter(p))
@@ -340,6 +389,7 @@ class Box:
         raise BoxError(f"no such file or folder: {p}")
 
     # ---------- edit tree ----------
+    @_locked
     def remove(self, p):
         p = norm(p)
         if p == "/":
@@ -359,6 +409,7 @@ class Box:
             return len(victims)
         raise BoxError(f"no such file or folder: {p}")
 
+    @_locked
     def move(self, src, dst):
         src, dst = norm(src), norm(dst)
         if dst in self._dirs:
