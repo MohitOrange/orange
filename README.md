@@ -37,7 +37,7 @@ install.bat
 **Or straight from GitHub with pip:**
 
 ```bash
-pip install git+https://github.com/<your-username>/orange.git
+pip install git+https://github.com/MohitOrange/orange.git
 ```
 
 Then finish setup:
