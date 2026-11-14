@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orange-box"
+version = "1.0.0"
+description = "Orange: an encrypted computer inside your computer (CLI + desktop window)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+dependencies = ["cryptography>=41"]
+
+[project.scripts]
+orange = "orange.cli:main"
+
+[tool.setuptools]
+packages = ["orange"]
