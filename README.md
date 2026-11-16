@@ -19,8 +19,43 @@ Works on **Windows**, **macOS** and **Linux**.
 - **Terminal**: a shell that only touches the box: `ls`, `cd`, `tree`, `cat`, `echo > file`, `find`, `neofetch` and more.
 - **Lens**: photos (zoom, pan, rotate, use as wallpaper), video and music streamed straight from the encrypted box, PDFs.
 - **Settings**: Night/Daylight themes, six accent colours, moving wallpapers or your own photo, motion (Full/Calm/Off), sounds, auto-lock, password change, storage ring.
+- **Arcade** 🎮: **115 small 2D games** for kids and families: Snake, Brick Breaker, Orange Fly, Pong, Racer, Balloon Pop,
+  Whack-a-Mole, Memory (animals, fruits, English and Tamil letters…), 2048, Minesweeper, Sudoku (4×4 to 9×9), Mazes,
+  Tic-Tac-Toe, Connect Four, Simon, Maths, Counting, Spelling, Balloon Words, Typing, Clock reading, Piano and more.
+  Best scores are saved encrypted in your box. Press the ⚡ button in any game to see FPS, game memory, CPU, RAM and free disk.
+- **My Games** ⭐: your own games, built in and playable offline: GAT City (3D), Neon Brawl (vs bots), Finger Ninja and
+  Hand Verse (these two use the camera and need internet for hand tracking).
+  The Unity Android shooter (2dshooting) is listed with a link: it runs on phones, not inside a desktop window.
+- **Learn** 🎓: English A–Z, Tamil உயிர் and மெய் letters, and numbers 1–20. Six activities: picture cards that speak,
+  listen-and-find, **trace the letter** (scored with stars), **speak test** (microphone), **reading test** with levels that
+  unlock, and picture puzzles. Progress is saved in the box, with a report in `Learning/My progress.md` and every traced
+  letter kept as a picture in `Learning/Writing`.
+  *The speak and reading tests use Edge/Chrome speech recognition, which needs internet. For Tamil speech on Windows,
+  add the Tamil voice: Settings → Time & language → Speech → Add voices.*
+- **Paint** 🎨: brush, eraser, fill bucket, lines, rectangles, circles, emoji stamps, 20 colours plus any colour, undo/redo.
+  Pictures are saved (encrypted) in `Pictures`.
+- **Studio** 🧑‍💻: everything ready offline, nothing to install. **HTML / CSS / JavaScript** and **React** (Preact + htm, bundled)
+  with a live sandboxed preview, **Python 3** (runs on your computer, 15 s limit), and **SQL** on a SQLite database that is
+  stored encrypted in your box. Save your work into `Projects`.
+- **Monitor** 📈: live CPU, RAM, disk (storage) and box size, and how much memory Orange itself is using.
 
 ![Files and Code side by side](docs/screenshots/files-and-code.jpg)
+
+| | |
+|---|---|
+| ![Arcade](docs/screenshots/arcade.jpg) **Arcade**: 115 games, scores saved in the box | ![Learn Tamil](docs/screenshots/learn-tamil.jpg) **Learn**: English, தமிழ் and numbers |
+| ![Trace a letter](docs/screenshots/learn-write.jpg) **Write**: trace the letter, earn stars | ![Paint](docs/screenshots/paint.jpg) **Paint** |
+| ![Studio React](docs/screenshots/studio-react.jpg) **Studio**: React with live preview | ![Monitor](docs/screenshots/monitor.jpg) **Monitor**: RAM, CPU, disk |
+
+### Light on your computer
+
+- Nothing loads until you open it: each game engine is a small file fetched the first time you play.
+- Games cap at 60 fps, draw at most 1.5× resolution, and **stop completely** when you minimise the window or switch away.
+- Most puzzles and learning games are plain buttons with no animation loop at all, so they use almost no CPU.
+- The wallpaper uses gradients instead of live blur and **holds still while a window is open**; game windows drop the
+  frosted-glass effect so the graphics chip is not re-blurring the desktop 60 times a second.
+- All 110 built-in games, Learn, Paint, Studio (with React) and Monitor add about **200 KB** of code; your four bundled
+  web games add 2.1 MB.
 
 ## A different desktop, for good reasons
 
@@ -42,7 +77,7 @@ menus, the Doherty threshold and more), in **[docs/DESIGN.md](docs/DESIGN.md)**.
 
 ## Install
 
-Needs Python 3.8+. On Windows and macOS, Microsoft Edge or Google Chrome is used
+Needs Python 3.8+ (`psutil` is installed with it, for the Monitor). On Windows and macOS, Microsoft Edge or Google Chrome is used
 to draw the desktop (Edge comes with Windows).
 
 ```bash
@@ -132,6 +167,10 @@ pytest
 | `orange/vault.py` | The encrypted box: files, folders, streaming and range reads |
 | `orange/server.py` | The local, locked-down server behind the desktop, and the app-window launcher |
 | `orange/web/` | The desktop: window manager, Segments, Pip, search, apps (no frameworks, works offline) |
+| `orange/web/js/arcade/` | The game kit (`engine.js`), the catalog of 115 games and the game engines they share |
+| `orange/web/js/apps/learn.js`, `learn/data.js` | Learn: letters, words, reading levels, speech and tracing |
+| `orange/web/games/` | Your own web games, bundled (GAT City, Neon Brawl, Finger Ninja, Hand Verse) |
+| `orange/web/vendor/` | Preact + htm (MIT) for React-style apps in Studio |
 | `orange/cli.py` | The `orange` command |
 | `orange/shell.py` | The terminal-only mode |
 | `orange/gui.py` | The classic v1 window |
@@ -143,7 +182,6 @@ Open Font License (see `orange/web/fonts/LICENSE.txt`).
 ## Roadmap
 
 - **Orange Linux**: a bootable ISO that uses this desktop as its whole shell (Dev / Play / Sec modes)
-- Run code from the Code app, inside a sandbox
 - Sync a box to a USB drive or cloud storage
 - Multiple desktops and widgets
 

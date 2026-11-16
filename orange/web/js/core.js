@@ -12,13 +12,23 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 export const DEFAULTS = {
   theme: 'night', accent: 'orange', wallpaper: 'juice', wallpaperPath: '', motion: reduced ? 'calm' : 'full',
   sound: true, autolock: 10, immersive: true, tourDone: false, view: 'grid', windows: {}, session: [],
-  hotCorners: false, pinned: ['files', 'code', 'terminal', 'lens', 'settings'],
+  hotCorners: false, pinned: ['files', 'arcade', 'learn', 'paint', 'studio', 'code', 'terminal', 'lens', 'monitor', 'settings'],
+  gameHud: false, pinnedVersion: 3,
 };
+const NEW_IN_3 = ['arcade', 'learn', 'paint', 'studio', 'monitor'];
 
 export async function loadSettings() {
   let s = {};
   try { s = await api.get('settings'); } catch { /* first run */ }
   state.settings = { ...DEFAULTS, ...s };
+  // Boxes made before Orange 3 keep their own rail, with the new apps added once.
+  if ((state.settings.pinnedVersion || 0) < 3) {
+    const pin = [...(state.settings.pinned || [])];
+    for (const id of NEW_IN_3) if (!pin.includes(id)) pin.splice(Math.min(pin.length, 1 + NEW_IN_3.indexOf(id)), 0, id);
+    state.settings.pinned = pin;
+    state.settings.pinnedVersion = 3;
+    api.post('settings', state.settings).catch(() => {});
+  }
   applyLook();
 }
 
@@ -155,6 +165,22 @@ const P = {
   fullscreen: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   segments: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/>',
   heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  learn: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5M22 9v6"/>',
+  mic: '<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M19 17v4H6"/>',
+  paint: '<path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/><circle cx="5" cy="19" r="0.5"/>',
+  brush: '<path d="M18 3l3 3-9 9-3-3z"/><path d="M9 12c-2 0-4 1.5-4 4 0 1.5-1 2.5-2 3 2.5 1 7 .5 8-3 .4-1.4-.2-3-2-4z"/>',
+  eraser: '<path d="M7 20h13"/><path d="M4 15l9-9 6 6-7 7H8z"/><path d="M9 10l6 6"/>',
+  bucket: '<path d="M5 11l7-7 7 7-7 7z"/><path d="M19 15s2 2.3 2 3.5a2 2 0 0 1-4 0c0-1.2 2-3.5 2-3.5z"/>',
+  line: '<path d="M5 19L19 5"/>',
+  square: '<rect x="4" y="4" width="16" height="16" rx="2"/>',
+  circle: '<circle cx="12" cy="12" r="8"/>',
+  undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  redo: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/>',
+  save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/>',
+  studio: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 10l-2 2 2 2M16 10l2 2-2 2M13 9l-2 6"/>',
+  monitor: '<path d="M3 12h4l3-8 4 16 3-8h4"/><rect x="2" y="2" width="20" height="20" rx="4" opacity=".0"/>',
+  db: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
 };
 export function icon(name, size = 18, cls = '') {
   return `<svg class="ico ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.file}</svg>`;

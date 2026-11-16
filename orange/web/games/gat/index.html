@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAT: Liberty Shores</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-row">
+      <div class="stars" id="wanted"></div>
+    </div>
+    <div class="hud-row">
+      <div class="money" id="money">$0</div>
+    </div>
+    <div class="bars">
+      <div class="bar"><span class="bar-label">HP</span><div class="bar-track"><div class="bar-fill hp" id="hp"></div></div></div>
+      <div class="bar"><span class="bar-label">AR</span><div class="bar-track"><div class="bar-fill ar" id="armor"></div></div></div>
+    </div>
+    <div class="pname" id="pname"></div>
+    <div class="weapon" id="weapon">FIST</div>
+    <div class="ammo" id="ammo"></div>
+  </div>
+
+  <!-- Minimap -->
+  <canvas id="minimap"></canvas>
+
+  <!-- Cheat input feedback -->
+  <div id="cheat-msg"></div>
+  <div id="cheat-buffer"></div>
+
+  <!-- Big center message -->
+  <div id="center-msg"></div>
+
+  <!-- Crosshair -->
+  <div id="crosshair"></div>
+  <div id="lock-hint">Click to look around · ESC to release mouse</div>
+
+  <!-- Mission tracker -->
+  <div id="mission-hud" class="hidden">
+    <div class="m-head"><span class="m-icon" id="m-icon">🚕</span><span class="m-title" id="m-title"></span></div>
+    <div class="m-obj" id="m-obj"></div>
+    <div class="m-timer" id="m-timer"></div>
+  </div>
+
+  <!-- On-screen objective direction marker -->
+  <div id="obj-marker" class="hidden"><span class="obj-glyph" id="obj-glyph">◈</span><span class="obj-dist" id="obj-dist"></span></div>
+
+  <!-- "Press E" interaction prompt -->
+  <div id="interact-prompt" class="hidden"></div>
+
+  <!-- Start / help screen -->
+  <div id="overlay">
+    <div class="panel">
+      <h1>GAT<span>: Liberty Shores</span></h1>
+      <p class="tag">An open-world island sandbox — drive, fly, sail & cause chaos</p>
+      <div class="cols">
+        <div>
+          <h3>On Foot & Ground</h3>
+          <ul class="small">
+            <li><b>WASD</b> — Move / drive</li>
+            <li><b>Mouse / Click</b> — Aim & shoot</li>
+            <li><b>Space</b> — Jump</li>
+            <li><b>Shift</b> — Sprint (hold + W)</li>
+            <li><b>F</b> — Enter / exit vehicle</li>
+            <li><b>E</b> — Enter building / start mission</li>
+            <li><b>1-5</b> — Switch weapon</li>
+            <li><b>Space</b> — Handbrake (in car)</li>
+            <li>Walk off the beach to <b>swim</b></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Fly & Sail ✈🚁🚤</h3>
+          <ul class="small">
+            <li><b>W/S</b> — Forward / back</li>
+            <li><b>A/D</b> — Turn (yaw)</li>
+            <li><b>Space</b> — Ascend</li>
+            <li><b>Shift</b> — Descend</li>
+            <li>Boats & ships need <b>water</b></li>
+            <li>Find vehicles around town, or</li>
+            <li>use a spawn cheat →</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Cheats</h3>
+          <p class="small">Just type the code anytime:</p>
+          <ul class="small">
+            <li><b>HESOYAM</b> — Health, armor, $250k</li>
+            <li><b>FULLAMMO</b> — All weapons + ammo</li>
+            <li><b>CHOPPER</b> — Spawn a helicopter</li>
+            <li><b>JETSET</b> — Spawn an airplane</li>
+            <li><b>SEAFARER</b> — Spawn a boat</li>
+            <li><b>TWOWHEELS</b> — Spawn a motorbike</li>
+            <li><b>PEDALS</b> — Spawn a bicycle</li>
+            <li><b>PANZER</b> — Spawn a tank</li>
+            <li><b>ROCKETMAN</b> — Rocket launcher</li>
+            <li><b>GODMODE</b> — Invincibility</li>
+            <li><b>LEAVEMEALONE</b> / <b>ITSALLGONE</b> — Wanted</li>
+            <li><b>SPEEDFREAK</b> · <b>BAABAA</b> · <b>NIGHTMODE</b></li>
+          </ul>
+        </div>
+      </div>
+      <div class="name-row">
+        <label for="player-name">Player name</label>
+        <input id="player-name" type="text" maxlength="16" placeholder="Type your name…" autocomplete="off" />
+      </div>
+      <div class="btn-row">
+        <button id="start-btn">NEW GAME</button>
+        <button id="continue-btn" class="secondary" disabled>CONTINUE</button>
+      </div>
+      <p class="save-note" id="save-note"></p>
+    </div>
+  </div>
+
+  <!-- Pause / save menu -->
+  <div id="pause" class="hidden">
+    <div class="panel small-panel">
+      <h2>PAUSED</h2>
+      <p id="pause-info" class="pause-info"></p>
+      <div class="btn-row">
+        <button id="resume-btn">RESUME</button>
+        <button id="save-btn" class="secondary">SAVE GAME</button>
+      </div>
+      <button id="quit-btn" class="ghost">SAVE &amp; QUIT TO MENU</button>
+      <p class="save-note" id="pause-note"></p>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./js/three.module.js" } }
+</script>
+<script type="module" src="js/game3d.js"></script>
+</body>
+</html>

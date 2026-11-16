@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0a0614" />
+  <title>Finger Ninja — AR Fruit Slicer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <video id="video" playsinline muted></video>
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-card hud-left">
+      <div class="score-label">SCORE</div>
+      <div id="score">0</div>
+      <div id="best" class="best">BEST 0</div>
+    </div>
+    <div id="comboMeter" class="combo-meter"><span id="comboText"></span></div>
+    <div class="hud-card hud-right">
+      <div id="lives"></div>
+      <span id="trk-hand" class="dot">✋ HAND</span>
+    </div>
+  </div>
+
+  <!-- Title / setup screen -->
+  <div id="intro" class="screen">
+    <div class="intro-fruit" aria-hidden="true">
+      <span>🍉</span><span>🍊</span><span>🍍</span><span>🥝</span><span>🍇</span><span>🍋</span><span>🍑</span><span>🥥</span>
+    </div>
+    <div class="intro-card">
+      <div class="badge">AR · HAND TRACKING</div>
+      <h1>FINGER<span>NINJA</span></h1>
+      <p class="tag">Your index finger is the blade. Just raise your hand — no face, no controller.</p>
+      <div class="rules">
+        <div class="rule"><em>🍉</em><b>Slice</b><small>Swipe fast through fruit</small></div>
+        <div class="rule"><em>💣</em><b>Dodge</b><small>One bomb ends it</small></div>
+        <div class="rule"><em>❤️</em><b>3 lives</b><small>Don't let fruit drop</small></div>
+        <div class="rule"><em>⚡</em><b>Combo</b><small>3+ in one swipe</small></div>
+      </div>
+      <button id="startCam" class="btn">▶ Turn on camera</button>
+      <p class="small">Video stays on your device — nothing is uploaded. Best in good light, about 1 m from the screen.</p>
+      <p id="err" class="err"></p>
+    </div>
+  </div>
+
+  <!-- Player-ready check -->
+  <div id="ready" class="screen overlay hidden">
+    <div class="glass ready-card">
+      <h2>Get ready</h2>
+      <ul class="checks">
+        <li id="chk-cam"><i></i>Camera on</li>
+        <li id="chk-model"><i></i>AI tracking loaded</li>
+        <li id="chk-hand"><i></i>Hand detected</li>
+      </ul>
+      <p id="readyHint" class="hint">Loading…</p>
+    </div>
+  </div>
+
+  <!-- Pause (hand left frame) -->
+  <div id="paused" class="banner hidden">✋ Paused — raise your hand to keep slicing</div>
+
+  <!-- Game over -->
+  <div id="over" class="screen overlay hidden">
+    <div class="glass over-card">
+      <h2 id="overTitle">BOOM!</h2>
+      <div class="final"><small>SCORE</small><b id="finalScore">0</b></div>
+      <div id="newBest" class="newbest hidden">★ NEW BEST ★</div>
+      <p class="hint">Hold your fingertip on the ring to play again (or click it)</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>

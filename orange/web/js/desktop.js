@@ -174,10 +174,10 @@ function renderCorners() {
 }
 
 function launcherFan() {
-  const list = ['files', 'code', 'terminal', 'lens', 'settings', 'trash'].filter(id => apps[id]);
+  const list = ['files', 'arcade', 'learn', 'paint', 'studio', 'settings'].filter(id => apps[id]);
   radial({ x: 0, y: innerHeight, mode: 'corner', title: 'Apps', items: [
     ...list.map(id => ({ label: apps[id].name, icon: apps[id].icon, hint: apps[id].blurb, run: () => launch(id, {}, $('.c-bl')) })),
-    { label: 'Search', icon: 'search', hint: 'or just type', run: () => openZest('') },
+    { label: 'All apps', icon: 'grid', hint: 'or just type', run: () => openZest('') },
     { label: 'Lock', icon: 'lock', hint: 'Ctrl+L', run: () => lock() },
   ] });
 }
@@ -324,6 +324,11 @@ function actions() {
     { title: 'Empty the Trash', sub: 'opens Trash', icon: 'trash', keys: 'bin recycle trash', run: () => launch('trash') },
     { title: 'Change password', sub: 'Settings · Security', icon: 'shield', keys: 'password security', run: () => launch('settings', { section: 'security' }) },
     { title: 'Storage', sub: 'what’s using space', icon: 'archive', keys: 'disk space storage', run: () => launch('settings', { section: 'storage' }) },
+    { title: 'Play a game', sub: 'Arcade · 100+ games', icon: 'play', keys: 'game games play arcade fun kids', run: () => launch('arcade') },
+    { title: 'Learn letters', sub: 'English · தமிழ் · numbers', icon: 'learn', keys: 'learn tamil english abc alphabet read write speak kids school', run: () => launch('learn') },
+    { title: 'Draw a picture', sub: 'Paint', icon: 'paint', keys: 'draw paint picture colour color art', run: () => launch('paint') },
+    { title: 'Write code', sub: 'Studio · HTML CSS React Python SQL', icon: 'studio', keys: 'html css react python sql database javascript program code', run: () => launch('studio') },
+    { title: 'Check RAM and CPU', sub: 'Monitor', icon: 'monitor', keys: 'ram cpu memory rom disk performance task manager', run: () => launch('monitor') },
     { title: 'Keyboard shortcuts', sub: 'press ? any time', icon: 'keyboard', keys: 'keys hotkeys help', run: showKeys },
     { title: 'Welcome tour', sub: '30 seconds', icon: 'sparkle', keys: 'help tour guide intro', run: startTour },
     { title: 'Full screen', sub: 'toggle', icon: 'fullscreen', keys: 'fullscreen immersive', run: () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {}) },

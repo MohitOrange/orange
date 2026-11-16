@@ -43,7 +43,14 @@ ASSET_TYPES = {
     ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
     ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".woff2": "font/woff2",
     ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json", ".txt": "text/plain",
+    ".mjs": "text/javascript; charset=utf-8", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
+    ".webp": "image/webp", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg", ".glb": "model/gltf-binary",
+    ".gltf": "model/gltf+json", ".wasm": "application/wasm", ".woff": "font/woff", ".ttf": "font/ttf", ".md": "text/plain; charset=utf-8",
 }
+PLAY_CSP = ("sandbox allow-scripts allow-modals allow-forms allow-pointer-lock; default-src 'none'; "
+            "script-src 'unsafe-inline' 'self'; style-src 'unsafe-inline' 'self'; img-src data: blob: 'self'; "
+            "font-src data: 'self'; media-src data: blob:; connect-src 'none'")
+KV_KEY = __import__("re").compile(r"^[a-z0-9_-]{1,40}$")
 FILE_TYPES = {
     ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
     ".bmp": "image/bmp", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".avif": "image/avif",
@@ -102,6 +109,8 @@ class Desktop:
         self.last_seen = time.time()
         self.failures = 0
         self.started = time.time()
+        self.plays = {}
+        self._cpu_prev = None
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.httpd.daemon_threads = True
         self.httpd.desktop = self
@@ -207,6 +216,8 @@ class Handler(BaseHTTPRequestHandler):
             q = {k: v[0] for k, v in parse_qs(url.query).items()}
             if url.path == "/" and method == "GET":
                 return self._index(q)
+            if url.path.startswith("/play/") and method == "GET":
+                return self._play(url.path[6:])
             if not url.path.startswith("/api/"):
                 return self._static(url.path) if method == "GET" else self._error(405, "not allowed")
             if not self._authed():
@@ -248,6 +259,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._error(404, "not found")
         ctype = ASSET_TYPES.get(target.suffix.lower(), "application/octet-stream")
         self._send(200, target.read_bytes(), ctype, {"Cache-Control": "no-cache"})
+
+    def _play(self, pid):
+        """Studio's web preview: user code runs in a sandbox with no access to the box."""
+        if not self._authed():
+            return self._error(401, "not signed in")
+        html = self.d.plays.get(pid)
+        if html is None:
+            return self._error(404, "preview expired")
+        self._send(200, html.encode("utf-8"), "text/html; charset=utf-8", {"Content-Security-Policy": PLAY_CSP})
 
     # ---- session ----
     def get_state(self, q, b):
@@ -422,6 +442,7 @@ class Handler(BaseHTTPRequestHandler):
         p = norm(b["path"])
         if is_system(p):
             return self._error(400, "bad destination")
+        p = unique(self.box, p) if b.get("unique") else p
         self.box.write_bytes(p, str(b.get("text", "")).encode("utf-8"))
         self._json({"ok": True, "path": p, "mtime": int(time.time())})
 
@@ -517,6 +538,120 @@ class Handler(BaseHTTPRequestHandler):
     def post_settings(self, q, b):
         self.d.write_json(SETTINGS, b)
         self._json({"ok": True})
+
+
+    # ---- small key/value stores (game scores, learning progress), encrypted in the box ----
+    def get_kv(self, q, b):
+        key = q.get("key", "")
+        if not KV_KEY.match(key):
+            return self._error(400, "bad key")
+        self._json(self.d.read_json(f"/.orange/kv/{key}.json", {}))
+
+    def post_kv(self, q, b):
+        key = str(b.get("key", ""))
+        if not KV_KEY.match(key):
+            return self._error(400, "bad key")
+        self.d.write_json(f"/.orange/kv/{key}.json", b.get("value", {}))
+        self._json({"ok": True})
+
+    # ---- system monitor ----
+    def get_sys(self, q, b):
+        self._json(system_stats(self.d))
+
+    # ---- Studio: run Python, SQL, and preview web pages ----
+    def post_runpy(self, q, b):
+        import tempfile
+        code = str(b.get("code", ""))
+        t0 = time.time()
+        with tempfile.TemporaryDirectory(prefix="orange-py-") as tmp:
+            try:
+                r = subprocess.run([sys.executable, "-I", "-c", code], input=str(b.get("stdin", "")), capture_output=True,
+                                   text=True, timeout=15, cwd=tmp, encoding="utf-8", errors="replace")
+                out, err, rc = r.stdout, r.stderr, r.returncode
+            except subprocess.TimeoutExpired as e:
+                out, err, rc = (e.stdout or "") if isinstance(e.stdout, str) else "", "Stopped: the program ran longer than 15 seconds.", -1
+        self._json({"stdout": out[-200000:], "stderr": err[-50000:], "code": rc, "ms": int((time.time() - t0) * 1000)})
+
+    def post_sql(self, q, b):
+        import sqlite3
+        path = norm(str(b.get("path") or "/Projects/orange.db"))
+        if is_system(path):
+            return self._error(400, "bad database path")
+        con = sqlite3.connect(":memory:")
+        if self.box.is_file(path):
+            con.deserialize(self.box.read_bytes(path))
+        before = con.total_changes
+        results, stmt = [], ""
+        try:
+            for line in str(b.get("query", "")).splitlines(True):
+                stmt += line
+                if sqlite3.complete_statement(stmt):
+                    cur = con.execute(stmt)
+                    if cur.description:
+                        rows = cur.fetchmany(500)
+                        results.append({"columns": [c[0] for c in cur.description], "rows": [list(r) for r in rows]})
+                    else:
+                        results.append({"changed": cur.rowcount})
+                    stmt = ""
+            if stmt.strip():
+                raise sqlite3.OperationalError("incomplete statement (missing ;)")
+            con.commit()
+        except sqlite3.Error as e:
+            return self._json({"error": str(e), "results": results})
+        if con.total_changes != before or not self.box.is_file(path):
+            self.box.write_bytes(path, con.serialize())
+        tables = [r[0] for r in con.execute("select name from sqlite_master where type='table' order by name")]
+        self._json({"results": results, "tables": tables, "path": path})
+
+    def post_play(self, q, b):
+        pid = secrets.token_urlsafe(12)
+        self.d.plays[pid] = str(b.get("html", ""))[:3_000_000]
+        while len(self.d.plays) > 20:
+            self.d.plays.pop(next(iter(self.d.plays)))
+        self._json({"url": f"/play/{pid}"})
+
+
+def system_stats(desk):
+    """RAM, CPU and disk numbers for the Monitor app and the in-game overlay (psutil if present)."""
+    out = {"cpu": None, "ram": None, "proc": None, "disk": None, "box": desk.box.usage()[1] if not desk.locked else 0,
+           "cores": os.cpu_count()}
+    try:
+        import psutil
+        vm = psutil.virtual_memory()
+        out["cpu"] = psutil.cpu_percent(interval=None)
+        out["ram"] = {"total": vm.total, "used": vm.total - vm.available, "percent": vm.percent}
+        out["proc"] = psutil.Process().memory_info().rss
+    except ImportError:
+        if sys.platform.startswith("linux"):
+            info = {l.split(":")[0]: int(l.split()[1]) * 1024 for l in open("/proc/meminfo") if l.split()[1].isdigit()}
+            total, avail = info.get("MemTotal", 0), info.get("MemAvailable", 0)
+            out["ram"] = {"total": total, "used": total - avail, "percent": round(100 * (total - avail) / max(total, 1), 1)}
+            f = [int(v) for v in open("/proc/stat").readline().split()[1:]]
+            idle, tot = f[3] + f[4], sum(f)
+            if desk._cpu_prev:
+                di, dt = idle - desk._cpu_prev[0], tot - desk._cpu_prev[1]
+                out["cpu"] = round(100 * (1 - di / max(dt, 1)), 1)
+            desk._cpu_prev = (idle, tot)
+            out["proc"] = int(open("/proc/self/statm").read().split()[1]) * os.sysconf("SC_PAGE_SIZE")
+        elif sys.platform == "win32":
+            import ctypes
+
+            class MS(ctypes.Structure):
+                _fields_ = [("l", ctypes.c_ulong), ("load", ctypes.c_ulong), ("total", ctypes.c_ulonglong), ("avail", ctypes.c_ulonglong),
+                            ("tp", ctypes.c_ulonglong), ("ap", ctypes.c_ulonglong), ("tv", ctypes.c_ulonglong), ("av", ctypes.c_ulonglong), ("e", ctypes.c_ulonglong)]
+            m = MS(); m.l = ctypes.sizeof(MS)
+            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
+            out["ram"] = {"total": m.total, "used": m.total - m.avail, "percent": m.load}
+            ft = [ctypes.c_ulonglong() for _ in range(3)]
+            ctypes.windll.kernel32.GetSystemTimes(*[ctypes.byref(x) for x in ft])
+            idle, total = ft[0].value, ft[1].value + ft[2].value
+            if desk._cpu_prev:
+                di, dt = idle - desk._cpu_prev[0], total - desk._cpu_prev[1]
+                out["cpu"] = round(100 * (1 - di / max(dt, 1)), 1)
+            desk._cpu_prev = (idle, total)
+    du = shutil.disk_usage(desk.box.path)
+    out["disk"] = {"total": du.total, "free": du.free}
+    return out
 
 
 # ---------------------------------------------------------------- launching

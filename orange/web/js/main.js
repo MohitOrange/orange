@@ -6,6 +6,11 @@ import './apps/code.js';
 import './apps/terminal.js';
 import './apps/lens.js';
 import './apps/settings.js';
+import './apps/arcade.js';
+import './apps/learn.js';
+import './apps/paint.js';
+import './apps/studio.js';
+import './apps/monitor.js';
 import { start } from './desktop.js';
 
 history.replaceState(null, '', '/');   // drop the one-time secret from the address

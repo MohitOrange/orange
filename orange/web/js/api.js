@@ -37,10 +37,10 @@ export const api = {
   },
 
   // Streams one file into the box. XHR is used because fetch has no upload progress.
-  upload(path, file, onProgress) {
+  upload(path, file, onProgress, replace) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload?' + new URLSearchParams({ path }));
+      xhr.open('POST', '/api/upload?' + new URLSearchParams(replace ? { path, replace: 1 } : { path }));
       xhr.setRequestHeader('X-Orange', '1');
       xhr.upload.onprogress = e => e.lengthComputable && onProgress && onProgress(e.loaded, e.total);
       xhr.onload = () => {

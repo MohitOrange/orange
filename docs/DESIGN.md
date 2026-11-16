@@ -91,6 +91,27 @@ people with motion sensitivity.
 | ![Overview](screenshots/overview.jpg) **Overview.** Every window at once. | ![Undo](screenshots/undo-in-the-pip.jpg) **Undo in the Pip.** Deleting is instant and reversible. |
 | ![Daylight](screenshots/daylight-settings.jpg) **Daylight** theme and Settings. Changes apply instantly. | ![Lock](screenshots/lock.jpg) **Lock.** The key is wiped from memory until you type your password. |
 
+## Orange 3: play, learn, make
+
+Orange 3 adds the things a family computer needs, built to the same rules: everything works offline and
+everything you make or earn is stored inside the encrypted box.
+
+| | |
+|---|---|
+| ![Arcade](screenshots/arcade.jpg) **Arcade.** 115 games in one window. Search, filter by Kids, Action, Puzzles, Brain, Classics, My Games. | ![A game](screenshots/game-memory.jpg) **Every game, one shell.** Back, score, best, pause, restart and the ⚡ performance strip (FPS, game memory, CPU, RAM, free disk). |
+| ![Learn](screenshots/learn-tamil.jpg) **Learn.** English, தமிழ் and numbers; six activities each. | ![Write](screenshots/learn-write.jpg) **Write.** Trace over a guide letter; coverage of the letter shape becomes 1 to 3 stars. |
+| ![Paint](screenshots/paint.jpg) **Paint.** Big targets, bright palette, stamps for small hands. | ![Studio](screenshots/studio-python.jpg) **Studio.** HTML, React, Python and SQL, with nothing to install. |
+
+**How 115 games stay small.** The games share 39 small engines, each written once and tuned by parameters
+(speed, size, theme, level). A Snake with no walls, a 6×6 Sudoku and a Tamil-letter Memory are the same code
+with different settings. An engine file loads only the first time one of its games is opened.
+
+**Why they stay cool.** The engine draws at most 60 frames a second and at most 1.5× resolution, and it stops
+entirely when the window is minimised or hidden. Board, quiz and learning games have no frame loop at all.
+Profiling the desktop also showed that the moving wallpaper (four huge blurred blobs, re-blurred every frame)
+and frosted glass over animated content cost far more than any game, so the blobs are now plain gradients
+that hold still while a window is open, and game windows use a solid background.
+
 ---
 
 ## What comes next

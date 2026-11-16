@@ -113,3 +113,67 @@ def test_search_and_recent(desk):
     assert [h["path"] for h in hits] == ["/Projects/game/main.py"]
     recent = json.loads(call(desk, "GET", "/api/recent?n=3")[1])["items"]
     assert recent[0]["path"] == "/Projects/game/main.py"
+
+
+# ---------------------------------------------------------------- Orange 3: apps API
+def test_kv_store_is_encrypted_and_validates_keys(desk):
+    value = {"best": {"snake": 42}, "recent": ["snake"]}
+    assert call(desk, "POST", "/api/kv", {"key": "arcade", "value": value})[0] == 200
+    assert json.loads(call(desk, "GET", "/api/kv?key=arcade")[1]) == value
+    assert json.loads(call(desk, "GET", "/api/kv?key=learn")[1]) == {}          # unknown keys start empty
+    assert call(desk, "POST", "/api/kv", {"key": "../escape", "value": 1})[0] == 400
+    assert call(desk, "GET", "/api/kv?key=a/b")[0] == 400
+    for root, _, files in os.walk(desk.box.path):
+        for f in files:
+            assert b"snake" not in open(os.path.join(root, f), "rb").read()      # scores never hit the disk in clear
+
+
+def test_system_stats(desk):
+    s = json.loads(call(desk, "GET", "/api/sys")[1])
+    assert s["disk"]["total"] > s["disk"]["free"] > 0
+    assert s["cores"] >= 1 and s["box"] >= 0
+    assert s["ram"] is None or 0 <= s["ram"]["percent"] <= 100
+
+
+def test_python_runner(desk):
+    r = json.loads(call(desk, "POST", "/api/runpy", {"code": "print(input()[::-1]); import sys; sys.exit(3)", "stdin": "egnaro"})[1])
+    assert r["stdout"].strip() == "orange" and r["code"] == 3
+    r = json.loads(call(desk, "POST", "/api/runpy", {"code": "1/0"})[1])
+    assert "ZeroDivisionError" in r["stderr"] and r["code"] != 0
+
+
+def test_sql_database_lives_in_the_box(desk):
+    q = "CREATE TABLE t (n INTEGER, name TEXT);\nINSERT INTO t VALUES (1, 'orange'), (2, 'mango');\nSELECT name FROM t ORDER BY n;"
+    r = json.loads(call(desk, "POST", "/api/sql", {"path": "/Projects/test.db", "query": q})[1])
+    assert r["results"][-1] == {"columns": ["name"], "rows": [["orange"], ["mango"]]} and r["tables"] == ["t"]
+    r = json.loads(call(desk, "POST", "/api/sql", {"path": "/Projects/test.db", "query": "SELECT COUNT(*) AS c FROM t;"})[1])
+    assert r["results"][0]["rows"] == [[2]]                                       # persisted, encrypted, between calls
+    assert desk.box.read_bytes("/Projects/test.db")[:15] == b"SQLite format 3"
+    r = json.loads(call(desk, "POST", "/api/sql", {"path": "/Projects/test.db", "query": "SELECT * FROM nope;"})[1])
+    assert "no such table" in r["error"]
+    assert call(desk, "POST", "/api/sql", {"path": "/.orange/settings.json", "query": "SELECT 1;"})[0] == 400
+
+
+def test_studio_preview_is_sandboxed(desk):
+    url = json.loads(call(desk, "POST", "/api/play", {"html": "<h1>hi</h1>"})[1])["url"]
+    status, body, headers = call(desk, "GET", url)
+    assert status == 200 and body == b"<h1>hi</h1>"
+    csp = headers["Content-Security-Policy"]
+    assert csp.startswith("sandbox allow-scripts") and "allow-same-origin" not in csp and "connect-src 'none'" in csp
+    assert call(desk, "GET", url, cookie=False)[0] == 401
+    assert call(desk, "GET", "/play/unknown")[0] == 404
+
+
+def test_write_unique_and_upload_replace(desk):
+    call(desk, "POST", "/api/write", {"path": "/Projects/a.py", "text": "print(1)"})
+    r = json.loads(call(desk, "POST", "/api/write", {"path": "/Projects/a.py", "text": "print(2)", "unique": True})[1])
+    assert r["path"] == "/Projects/a (2).py" and desk.box.read_bytes("/Projects/a.py") == b"print(1)"
+    call(desk, "POST", "/api/upload?path=/Pictures/d.png", raw=b"one")
+    r = json.loads(call(desk, "POST", "/api/upload?path=/Pictures/d.png&replace=1", raw=b"two")[1])
+    assert r["path"] == "/Pictures/d.png" and desk.box.read_bytes("/Pictures/d.png") == b"two"
+
+
+def test_bundled_games_and_vendor_files_are_served(desk):
+    for path in ["/js/arcade/catalog.js", "/js/apps/learn.js", "/vendor/preact.umd.js", "/games/neon-brawl/index.html", "/games/gat/index.html"]:
+        status, body, _ = call(desk, "GET", path)
+        assert status == 200 and body, path
