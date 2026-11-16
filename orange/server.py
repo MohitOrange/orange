@@ -30,6 +30,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from . import __version__
+from .hostapps import HostApps, step_aside
 from .vault import AuthError, Box, BoxError, home, norm
 
 WEB = (Path(__file__).parent / "web").resolve()
@@ -110,6 +111,8 @@ class Desktop:
         self.failures = 0
         self.started = time.time()
         self.plays = {}
+        self.hostapps = HostApps()
+        self.browser_pid = None
         self._cpu_prev = None
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.httpd.daemon_threads = True
@@ -223,7 +226,7 @@ class Handler(BaseHTTPRequestHandler):
             if not self._authed():
                 return self._error(401, "open Orange from your terminal")
             name = url.path[5:]
-            if name != "file" and self.headers.get("X-Orange") != "1":
+            if name not in ("file", "hosticon") and self.headers.get("X-Orange") != "1":   # <img>/<video> loads cannot send headers
                 return self._error(403, "missing header")
             if self.d.locked and name not in ("state", "unlock", "heartbeat", "shutdown"):
                 return self._error(423, "locked")
@@ -603,6 +606,41 @@ class Handler(BaseHTTPRequestHandler):
         tables = [r[0] for r in con.execute("select name from sqlite_master where type='table' order by name")]
         self._json({"results": results, "tables": tables, "path": path})
 
+    # ---- DivyaNik Publishing House: EPUB ebook export ----
+    def post_epub(self, q, b):
+        src = norm(str(b.get("path", "")))
+        if is_system(src) or not src.endswith("/book.json") or not self.box.is_file(src):
+            return self._error(400, "not a book")
+        book = json.loads(self.box.read_bytes(src))
+        data = build_epub(book, self.box)
+        name = "".join(ch for ch in str(book.get("title") or "Book") if ch not in '\\/:*?"<>|').strip() or "Book"
+        dst = posixpath.join(posixpath.dirname(src), f"{name}.epub")
+        self.box.write_bytes(dst, data)
+        self._json({"ok": True, "path": dst, "size": len(data)})
+
+    # ---- apps installed on this computer (the Computer app) ----
+    def get_hostapps(self, q, b):
+        self._json(self.d.hostapps.listing(refresh=q.get("refresh") == "1"))
+
+    def get_hosticon(self, q, b):
+        found = self.d.hostapps.icon(q.get("id", ""))
+        if not found:
+            return self._error(404, "no icon")
+        self._send(200, found[0], found[1], {"Content-Security-Policy": FILE_CSP})
+
+    def post_hostlaunch(self, q, b):
+        try:
+            name = self.d.hostapps.launch(str(b.get("id", "")))
+        except KeyError:
+            return self._error(404, "That app is not on the list any more. Refresh and try again.")
+        except OSError as e:
+            return self._error(500, f"Could not open it: {e}")
+        stepped = False
+        if b.get("step_aside") and self.d.browser_pid:
+            threading.Timer(0.4, step_aside, args=(self.d.browser_pid,)).start()
+            stepped = True
+        self._json({"ok": True, "name": name, "stepped_aside": stepped})
+
     def post_play(self, q, b):
         pid = secrets.token_urlsafe(12)
         self.d.plays[pid] = str(b.get("html", ""))[:3_000_000]
@@ -610,6 +648,54 @@ class Handler(BaseHTTPRequestHandler):
             self.d.plays.pop(next(iter(self.d.plays)))
         self._json({"url": f"/play/{pid}"})
 
+
+def build_epub(book, box):
+    """An EPUB 3 ebook from a Publishing House book (title, pen name, chapters, optional cover)."""
+    import html
+    import io
+    import uuid
+    import zipfile
+    esc = lambda v: html.escape(str(v or ""), quote=True)
+    lang = str(book.get("language") or "en")[:8]
+    chapters = book.get("chapters") or []
+    def page(title, body):
+        return (f'<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="{esc(lang)}" lang="{esc(lang)}">'
+                f'<head><meta charset="utf-8"/><title>{esc(title)}</title><link rel="stylesheet" href="style.css"/></head><body>{body}</body></html>')
+    paras = lambda t: "".join(f"<p>{esc(p).replace(chr(10), '<br/>')}</p>" for p in str(t or "").replace("\r", "").split("\n\n") if p.strip())
+    cover, cover_name, cover_type = None, "", ""
+    cp = book.get("cover")
+    if cp and box.is_file(cp):
+        ext = posixpath.splitext(cp)[1].lower()
+        cover_type = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(ext, "")
+        if cover_type:
+            cover, cover_name = box.read_bytes(cp), "cover" + ext
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as z:
+        z.writestr(zipfile.ZipInfo("mimetype"), "application/epub+zip", compress_type=zipfile.ZIP_STORED)   # must be first and uncompressed
+        z.writestr("META-INF/container.xml", '<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>', compress_type=zipfile.ZIP_DEFLATED)
+        z.writestr("OEBPS/style.css", "body{font-family:serif;line-height:1.6;margin:1em}h1,h2{text-align:center}p{text-indent:1.2em;margin:0 0 .6em}.title p{text-indent:0;text-align:center}img{max-width:100%}", compress_type=zipfile.ZIP_DEFLATED)
+        title_body = (f'<div class="title">' + (f'<img src="{cover_name}" alt="cover"/>' if cover else "") + f'<h1>{esc(book.get("title"))}</h1><p>by {esc(book.get("penName") or "the author")}</p>'
+                      + (f'<p><em>{esc(book.get("description"))}</em></p>' if book.get("description") else "") + "</div>")
+        z.writestr("OEBPS/title.xhtml", page(book.get("title"), title_body), compress_type=zipfile.ZIP_DEFLATED)
+        for i, ch in enumerate(chapters, 1):
+            z.writestr(f"OEBPS/chapter-{i}.xhtml", page(ch.get("title"), f'<h2>{esc(ch.get("title"))}</h2>{paras(ch.get("text"))}'), compress_type=zipfile.ZIP_DEFLATED)
+        if cover:
+            z.writestr(f"OEBPS/{cover_name}", cover, compress_type=zipfile.ZIP_STORED)
+        nav = "".join(f'<li><a href="chapter-{i}.xhtml">{esc(ch.get("title"))}</a></li>' for i, ch in enumerate(chapters, 1))
+        z.writestr("OEBPS/nav.xhtml", page("Contents", f'<nav epub:type="toc" id="toc"><h2>Contents</h2><ol>{nav}</ol></nav>'), compress_type=zipfile.ZIP_DEFLATED)
+        items = "".join(f'<item id="c{i}" href="chapter-{i}.xhtml" media-type="application/xhtml+xml"/>' for i in range(1, len(chapters) + 1))
+        if cover:
+            items += f'<item id="cover" href="{cover_name}" media-type="{cover_type}" properties="cover-image"/>'
+        spine = "".join(f'<itemref idref="c{i}"/>' for i in range(1, len(chapters) + 1))
+        modified = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        opf = (f'<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="{esc(lang)}">'
+               f'<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="bookid">urn:uuid:{uuid.uuid4()}</dc:identifier><dc:title>{esc(book.get("title"))}</dc:title>'
+               f'<dc:creator>{esc(book.get("penName") or "Unknown")}</dc:creator><dc:language>{esc(lang)}</dc:language><dc:publisher>DivyaNik Publishing House</dc:publisher>'
+               f'<meta property="dcterms:modified">{modified}</meta></metadata>'
+               f'<manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="css" href="style.css" media-type="text/css"/>'
+               f'<item id="title" href="title.xhtml" media-type="application/xhtml+xml"/>{items}</manifest><spine><itemref idref="title"/>{spine}</spine></package>')
+        z.writestr("OEBPS/content.opf", opf, compress_type=zipfile.ZIP_DEFLATED)
+    return out.getvalue()
 
 def system_stats(desk):
     """RAM, CPU and disk numbers for the Monitor app and the in-game overlay (psutil if present)."""
@@ -697,6 +783,7 @@ def run_desktop(box, fullscreen=True, on_ready=None):
         try:
             proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             desk.tracked = True
+            desk.browser_pid = proc.pid
         except OSError:
             proc = None
     if not proc and not webbrowser.open(desk.url):
@@ -710,7 +797,7 @@ def run_desktop(box, fullscreen=True, on_ready=None):
             if proc and proc.poll() is not None:
                 if time.time() - launched > 5:
                     break  # the Orange window was closed
-                proc, desk.tracked = None, False  # handed to an already-running browser: use heartbeats
+                proc, desk.tracked, desk.browser_pid = None, False, None  # handed to an already-running browser: use heartbeats
             if not proc and time.time() - desk.last_seen > 180:
                 break  # window gone (no heartbeat for 3 minutes)
     except KeyboardInterrupt:

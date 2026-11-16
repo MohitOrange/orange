@@ -19,13 +19,19 @@ Works on **Windows**, **macOS** and **Linux**.
 - **Terminal**: a shell that only touches the box: `ls`, `cd`, `tree`, `cat`, `echo > file`, `find`, `neofetch` and more.
 - **Lens**: photos (zoom, pan, rotate, use as wallpaper), video and music streamed straight from the encrypted box, PDFs.
 - **Settings**: Night/Daylight themes, six accent colours, moving wallpapers or your own photo, motion (Full/Calm/Off), sounds, auto-lock, password change, storage ring.
-- **Arcade** 🎮: **115 small 2D games** for kids and families: Snake, Brick Breaker, Orange Fly, Pong, Racer, Balloon Pop,
-  Whack-a-Mole, Memory (animals, fruits, English and Tamil letters…), 2048, Minesweeper, Sudoku (4×4 to 9×9), Mazes,
-  Tic-Tac-Toe, Connect Four, Simon, Maths, Counting, Spelling, Balloon Words, Typing, Clock reading, Piano and more.
-  Best scores are saved encrypted in your box. Press the ⚡ button in any game to see FPS, game memory, CPU, RAM and free disk.
+- **Arcade** 🎮: **107 different built-in 2D games** for kids and families, and every one is its own game: speeds, sizes,
+  themes and difficulties are **levels you pick on the game's start card**, not extra tiles. Action (Snake, Space Rocks,
+  Garden Guard, Road Crosser, Orange Muncher, Cave Glider, Neon Trails, Moon Lander…), sports (Bullseye archery, Hoop Shot,
+  Mini Golf, Air Hockey, Bowling, Penalty Kick, Cannon Duel…), puzzles (Ball Sort, Flood It, Picture Logic, Box Pusher,
+  2048, Sudoku…), boards and cards (Checkers, Flip Discs, Dots & Boxes, Snakes & Ladders, Sea Hunt, Twenty-One…),
+  brain games (Number Tap, Colour Eye, Code Breaker, Capital Cities, Listen & Spell, Tamil Words…) and toys for little
+  ones (Pop It, Drum Kit, Colouring Book, Dot to Dot, Feed the Monster, Juicy the pet orange, Orange Farm…).
+  Best scores (per level), the pet and the farm are saved encrypted in your box. Press the ⚡ button in any game to see
+  FPS, game memory, CPU, RAM and free disk.
 - **My Games** ⭐: your own games, built in and playable offline: GAT City (3D), Neon Brawl (vs bots), Finger Ninja and
   Hand Verse (these two use the camera and need internet for hand tracking).
   The Unity Android shooter (2dshooting) is listed with a link: it runs on phones, not inside a desktop window.
+- In the Arcade, the **DivyaNik** row opens Speed Reading, Speed Typing and QuestVerse.
 - **Learn** 🎓: English A–Z, Tamil உயிர் and மெய் letters, and numbers 1–20. Six activities: picture cards that speak,
   listen-and-find, **trace the letter** (scored with stars), **speak test** (microphone), **reading test** with levels that
   unlock, and picture puzzles. Progress is saved in the box, with a report in `Learning/My progress.md` and every traced
@@ -38,14 +44,42 @@ Works on **Windows**, **macOS** and **Linux**.
   with a live sandboxed preview, **Python 3** (runs on your computer, 15 s limit), and **SQL** on a SQLite database that is
   stored encrypted in your box. Save your work into `Projects`.
 - **Monitor** 📈: live CPU, RAM, disk (storage) and box size, and how much memory Orange itself is using.
+- **Computer** 💻: every app installed on this computer (the Windows Start menu list with its real icons, the macOS
+  Applications folder, or Linux's app list), with search, favourites and recents. Click one and it opens in its own
+  window; on Windows, Orange steps aside (minimises) so the app is in front. You can also just type an app's name on the
+  desktop. Apps open outside the box, so files you save in them are not encrypted by Orange.
+- **DivyaNik** 🧭: the DivyaNik learning platform's three modules, working offline inside your box:
+  - **Speed Test: Speed Reading.** Timed passages for Junior, Academic and Professional pathways, then a quiz with the
+    passage hidden. Reading speed (WPM, labelled as an estimate), comprehension, vocabulary, critical thinking and
+    retention, effective WPM, comparison with your last attempt and a progress chart. Reading aloud is rated by a parent
+    or teacher and kept apart from the automatic score.
+  - **Speed Test: Speed Typing.** Five levels (pass twice to unlock the next), tests of 30 seconds to 10 minutes, live WPM
+    and accuracy, gross and net WPM, consistency, a 100-mark score, weak-key analysis and history. Paste and drop are
+    blocked; suspiciously regular or impossibly fast typing is flagged and never certified. Certificate tests use their
+    own passages and save a certificate picture in `DivyaNik/Certificates`. Put your own passages in
+    `DivyaNik/Typing passages.txt` (one per paragraph) and they join the tests.
+  - **QuestVerse.** A monthly edition of missions by age band (4–6 up to 26+): sequence ordering, word builder, heritage
+    quiz and picture matching (scored automatically, 3 tries, growth from first to latest try), an eco-city plan with
+    100 points to share, photo and talk submissions and a written reflection. Creative work goes to a review desk where a
+    parent or teacher scores it with a four-part rubric; software never scores creativity. PRISM Explorer → Voyager →
+    Champion → Master badges come with a certificate.
+  - **Publishing House.** Write a book chapter by chapter (autosaved and encrypted), add a pen name, category, language,
+    description and a cover, accept the author agreement (a parent approves for under-18s), send it to an editor who can
+    comment, approve, ask for changes or decline, then publish it to your bookshelf. Export an **EPUB ebook** or print to
+    PDF at any time.
 
 ![Files and Code side by side](docs/screenshots/files-and-code.jpg)
 
 | | |
 |---|---|
+| ![Computer](docs/screenshots/computer.jpg) **Computer**: the apps on your PC, opened from Orange | ![Arcade levels](docs/screenshots/arcade-levels.jpg) **Levels**: one tile per game, levels on the start card |
+| ![Typing](docs/screenshots/divyanik-typing.jpg) **DivyaNik Speed Typing** | ![QuestVerse](docs/screenshots/divyanik-quest.jpg) **DivyaNik QuestVerse** |
+| ![Publishing House](docs/screenshots/divyanik-publish.jpg) **DivyaNik Publishing House** | ![A published book](docs/screenshots/divyanik-book.jpg) **Read, print or export EPUB** |
 | ![Arcade](docs/screenshots/arcade.jpg) **Arcade**: 115 games, scores saved in the box | ![Learn Tamil](docs/screenshots/learn-tamil.jpg) **Learn**: English, தமிழ் and numbers |
 | ![Trace a letter](docs/screenshots/learn-write.jpg) **Write**: trace the letter, earn stars | ![Paint](docs/screenshots/paint.jpg) **Paint** |
 | ![Studio React](docs/screenshots/studio-react.jpg) **Studio**: React with live preview | ![Monitor](docs/screenshots/monitor.jpg) **Monitor**: RAM, CPU, disk |
+
+![Some of the new games](docs/screenshots/games-new-1.jpg)
 
 ### Light on your computer
 
@@ -54,8 +88,8 @@ Works on **Windows**, **macOS** and **Linux**.
 - Most puzzles and learning games are plain buttons with no animation loop at all, so they use almost no CPU.
 - The wallpaper uses gradients instead of live blur and **holds still while a window is open**; game windows drop the
   frosted-glass effect so the graphics chip is not re-blurring the desktop 60 times a second.
-- All 110 built-in games, Learn, Paint, Studio (with React) and Monitor add about **200 KB** of code; your four bundled
-  web games add 2.1 MB.
+- All 107 built-in games, Learn, Paint, Studio (with React), Monitor, Computer and DivyaNik add about **500 KB** of code
+  (each game file loads only when one of its games is opened); your four bundled web games add 2.1 MB.
 
 ## A different desktop, for good reasons
 
@@ -167,7 +201,9 @@ pytest
 | `orange/vault.py` | The encrypted box: files, folders, streaming and range reads |
 | `orange/server.py` | The local, locked-down server behind the desktop, and the app-window launcher |
 | `orange/web/` | The desktop: window manager, Segments, Pip, search, apps (no frameworks, works offline) |
-| `orange/web/js/arcade/` | The game kit (`engine.js`), the catalog of 115 games and the game engines they share |
+| `orange/web/js/arcade/` | The game kit (`engine.js`: loop, levels, scores, performance strip), the catalog, and the games in `games/` |
+| `orange/web/js/divyanik/` | DivyaNik: reading, typing, QuestVerse, Publishing House and their sample content (`data.js`) |
+| `orange/hostapps.py` | Lists and opens the apps installed on this computer (Windows, macOS, Linux) |
 | `orange/web/js/apps/learn.js`, `learn/data.js` | Learn: letters, words, reading levels, speech and tracing |
 | `orange/web/games/` | Your own web games, bundled (GAT City, Neon Brawl, Finger Ninja, Hand Verse) |
 | `orange/web/vendor/` | Preact + htm (MIT) for React-style apps in Studio |

@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -177,3 +179,51 @@ def test_bundled_games_and_vendor_files_are_served(desk):
     for path in ["/js/arcade/catalog.js", "/js/apps/learn.js", "/vendor/preact.umd.js", "/games/neon-brawl/index.html", "/games/gat/index.html"]:
         status, body, _ = call(desk, "GET", path)
         assert status == 200 and body, path
+
+
+# ---------------------------------------------------------------- Computer app (apps installed on this computer)
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="uses XDG desktop entries")
+def test_host_apps_list_icon_and_launch(desk, tmp_path, monkeypatch):
+    share = tmp_path / "share"; (share / "applications").mkdir(parents=True); (share / "icons/hicolor/48x48/apps").mkdir(parents=True)
+    marker = tmp_path / "opened.txt"
+    (share / "applications/hello.desktop").write_text(f"[Desktop Entry]\nType=Application\nName=Hello Painter\nCategories=Graphics;\nIcon=hello\nExec=sh -c 'echo yes > {marker}' %U\n")
+    (share / "applications/hidden.desktop").write_text("[Desktop Entry]\nType=Application\nName=Secret\nNoDisplay=true\nExec=true\n")
+    (share / "applications/gone.desktop").write_text("[Desktop Entry]\nType=Application\nName=Uninstall Hello\nExec=true\n")
+    (share / "icons/hicolor/48x48/apps/hello.png").write_bytes(b"\x89PNG fake")
+    monkeypatch.setenv("XDG_DATA_HOME", str(share)); monkeypatch.setenv("XDG_DATA_DIRS", str(tmp_path / "none"))
+    r = json.loads(call(desk, "GET", "/api/hostapps?refresh=1")[1])
+    names = [a["name"] for a in r["apps"]]
+    assert "Hello Painter" in names and "Secret" not in names and "Uninstall Hello" not in names
+    app = next(a for a in r["apps"] if a["name"] == "Hello Painter")
+    assert app["group"] == "Media"
+    status, body, headers = call(desk, "GET", f"/api/hosticon?id={app['id']}")
+    assert status == 200 and body == b"\x89PNG fake" and headers["Content-Security-Policy"].startswith("sandbox")
+    assert json.loads(call(desk, "POST", "/api/hostlaunch", {"id": app["id"]})[1])["name"] == "Hello Painter"
+    for _ in range(50):
+        if marker.exists():
+            break
+        time.sleep(0.05)
+    assert marker.read_text().strip() == "yes"
+    assert call(desk, "POST", "/api/hostlaunch", {"id": "../../bin/sh"})[0] == 404   # only ids from the list can be opened
+
+
+# ---------------------------------------------------------------- DivyaNik Publishing House
+def test_epub_export(desk):
+    import io
+    import zipfile
+    book = {"title": "The Brave Little Kite", "penName": "Sky Writer", "language": "en", "description": "A kite that would not give up.",
+            "chapters": [{"title": "Chapter 1", "text": "Once upon a time <there> was a kite.\n\nIt flew & flew."}, {"title": "Chapter 2", "text": "The end."}]}
+    desk.box.write_bytes("/DivyaNik/Books/kite/book.json", json.dumps(book).encode())
+    desk.box.write_bytes("/DivyaNik/Books/kite/cover.png", b"\x89PNG fake")
+    book["cover"] = "/DivyaNik/Books/kite/cover.png"
+    desk.box.write_bytes("/DivyaNik/Books/kite/book.json", json.dumps(book).encode())
+    r = json.loads(call(desk, "POST", "/api/epub", {"path": "/DivyaNik/Books/kite/book.json"})[1])
+    assert r["path"] == "/DivyaNik/Books/kite/The Brave Little Kite.epub"
+    z = zipfile.ZipFile(io.BytesIO(desk.box.read_bytes(r["path"])))
+    first = z.infolist()[0]
+    assert first.filename == "mimetype" and first.compress_type == zipfile.ZIP_STORED and z.read("mimetype") == b"application/epub+zip"
+    assert {"META-INF/container.xml", "OEBPS/content.opf", "OEBPS/nav.xhtml", "OEBPS/chapter-1.xhtml", "OEBPS/chapter-2.xhtml", "OEBPS/cover.png"} <= set(z.namelist())
+    ch1 = z.read("OEBPS/chapter-1.xhtml").decode()
+    assert "&lt;there&gt;" in ch1 and "flew &amp; flew" in ch1 and ch1.count("<p>") == 2      # text is escaped, paragraphs kept
+    assert "Sky Writer" in z.read("OEBPS/content.opf").decode()
+    assert call(desk, "POST", "/api/epub", {"path": "/.orange/settings.json"})[0] == 400

@@ -112,6 +112,31 @@ Profiling the desktop also showed that the moving wallpaper (four huge blurred b
 and frosted glass over animated content cost far more than any game, so the blobs are now plain gradients
 that hold still while a window is open, and game windows use a solid background.
 
+## Orange 3.1: one tile per game, your PC's apps, and DivyaNik
+
+**Every tile is a different game.** Orange 3.0 listed speed and size variants as separate tiles (four Snakes, three Pongs).
+Now each game appears once and its variants are levels on the start card, with a best score kept per level. The freed
+places went to 68 new games, so the Arcade has 107 genuinely different built-in games.
+
+| | |
+|---|---|
+| ![New action and arcade games](screenshots/games-new-1.jpg) **New action games.** Space Rocks, Garden Guard, Road Crosser, Orange Muncher, Cave Glider, Sky Hopper, Colour Gate, Coin Hop, Neon Trails, Hungry Fish, Moon Lander, Fireworks. | ![New sports games](screenshots/games-new-2.jpg) **New sports and skill games.** Archery, basketball, mini golf, air hockey, cannons, bowling, penalties, keepy-uppy, fruit slicing, fishing, a rhythm game and a bubble shooter. |
+
+**Opening the computer's own apps.** Orange is a browser window over a local server, so it cannot draw another
+program inside itself. Instead the Computer app asks the operating system for the same list its own menu shows and
+starts an app by id. The page never sends a command or a path, so nothing typed into Orange can become a program to
+run. Because those apps live outside the box, the Computer app says so plainly: files saved there are not encrypted.
+
+**DivyaNik inside Orange.** The DivyaNik scope describes a web platform with logins, parents, teachers, payments and
+reviewers. Orange keeps the parts that work for one learner on one computer (reading and typing tests, missions,
+writing and publishing) and stores all of it in the box. Where the scope needs people or a server (reviewer queues,
+parent consent records, certificate QR verification, the public catalogue, plagiarism screening), Orange either does a
+local version (a review desk and a parent approval step on the same computer) or says that it needs the platform.
+
+| | |
+|---|---|
+| ![Typing report](screenshots/divyanik-typing-report.jpg) **Typing report.** Net and gross WPM, accuracy, consistency, a 100-mark score, the level thresholds and weak keys. | ![QuestVerse](screenshots/divyanik-quest.jpg) **QuestVerse.** Missions by age band, scored automatically or by a reviewer, with PRISM badges. |
+
 ---
 
 ## What comes next

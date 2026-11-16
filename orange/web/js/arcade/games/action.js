@@ -1,24 +1,7 @@
 // Action games: each is a small object { w, h, start, update, draw, key?, tap?, move? } run by engine.js.
 import { rand, pick, clamp, hit, PALETTE } from '../engine.js';
 
-// ---------- shared drawing helpers
-const skies = new WeakMap();   // gradients are built once per canvas, not every frame
-const sky = (c, w, h, a, b) => {
-  let m = skies.get(c); if (!m) skies.set(c, (m = new Map()));
-  const k = a + b + h; let g = m.get(k);
-  if (!g) { g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, a); g.addColorStop(1, b); m.set(k, g); }
-  c.fillStyle = g; c.fillRect(0, 0, w, h);
-};
-const rr = (c, x, y, w, h, r, fill) => { c.beginPath(); c.roundRect(x, y, w, h, r); c.fillStyle = fill; c.fill(); };
-const dot = (c, x, y, r, fill) => { c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = fill; c.fill(); };
-const txt = (c, s, x, y, size = 20, color = '#fff', align = 'center') => { c.font = `800 ${size}px Sora, sans-serif`; c.fillStyle = color; c.textAlign = align; c.textBaseline = 'middle'; c.fillText(s, x, y); };
-const emoji = (c, e, x, y, size) => { c.font = `${size}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(e, x, y); };
-const steer = (G, speed, dt, obj, min, max) => {   // keys or pointer move an object left/right
-  if (G.keys.has('ArrowLeft') || G.keys.has('a')) obj.x -= speed * dt;
-  if (G.keys.has('ArrowRight') || G.keys.has('d')) obj.x += speed * dt;
-  if (G.pointer.down) obj.x += clamp(G.pointer.x - (obj.x + (obj.w || 0) / 2), -speed * dt * 1.4, speed * dt * 1.4);
-  obj.x = clamp(obj.x, min, max);
-};
+import { sky, rr, dot, txt, emoji, steer } from './kit.js';
 
 // ================================================================ Snake
 export const snake = {

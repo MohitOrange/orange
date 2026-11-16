@@ -1,8 +1,8 @@
 // Arcade: 100+ small games for kids and families, plus Mohit's own games.
 import { h, icon, ico, state, fail, sfx, anim, EASE, debounce } from '../core.js';
-import { register } from '../registry.js';
-import { CATALOG, CATS } from '../arcade/catalog.js';
-import { runGame, loadScores, best, recordPlay } from '../arcade/engine.js';
+import { register, launch } from '../registry.js';
+import { CATALOG, CATS, GAME_COUNT } from '../arcade/catalog.js';
+import { runGame, loadScores, best, bestKey, recordPlay, migrateScores } from '../arcade/engine.js';
 
 const mods = {};
 const loadEngine = file => (mods[file] ||= import(`../arcade/games/${file}.js`));
@@ -17,7 +17,7 @@ function mount(win, args) {
   function tile(e, i) {
     const b = h('button', { class: 'arc-tile', style: { '--c': e.color, '--i': Math.min(i, 30) }, onclick: () => open(e, b) },
       h('span', { class: 'arc-ico' }, e.icon), h('b', {}, e.title),
-      h('small', {}, best(e.id) ? `best ${best(e.id)}` : CATS.find(c => c[0] === e.cat)?.[1] || ''));
+      h('small', {}, best(bestKey(e)) ? `best ${best(bestKey(e))}` : e.modes ? `${e.modes.length} levels` : e.params.note && e.cat === 'quest' ? e.params.note : CATS.find(c => c[0] === e.cat)?.[1] || ''));
     return b;
   }
 
@@ -25,13 +25,15 @@ function mount(win, args) {
     S.runner?.destroy(); S.runner = null; S.game = null;
     win.setTitle('Arcade');
     const store = await loadScores();
-    const search = h('input', { class: 'search-in arc-search', placeholder: `Search ${CATALOG.length} games`, value: S.q, spellcheck: 'false' });
+    migrateScores(CATALOG);
+    const search = h('input', { class: 'search-in arc-search', placeholder: `Search ${GAME_COUNT} games`, value: S.q, spellcheck: 'false' });
     const chips = h('div', { class: 'arc-chips' }, CATS.map(([id, label, i]) => h('button', { class: 'arc-chip' + (S.cat === id ? ' on' : ''), onclick: () => { S.cat = id; hub(); } }, `${i} ${label}`)));
     const gridEl = h('div', { class: 'arc-grid' });
     const paint = () => {
       const q = S.q.toLowerCase();
-      const list = CATALOG.filter(e => (S.cat === 'all' || e.cat === S.cat) && (!q || e.title.toLowerCase().includes(q)));
+      const list = CATALOG.filter(e => (S.cat === 'all' || e.cat === S.cat) && (!q || e.title.toLowerCase().includes(q) || (e.modes || []).some(m => m[0].toLowerCase().includes(q))));
       gridEl.replaceChildren(...list.map(tile));
+      root.querySelector('.arc-sec')?.toggleAttribute('hidden', !!q);
       win.setStatus(`${list.length} games`);
     };
     search.oninput = debounce(() => { S.q = search.value; paint(); }, 80);
@@ -39,7 +41,7 @@ function mount(win, args) {
     root.replaceChildren(
       h('header', { class: 'tb arc-head', 'data-drag': '' }, h('span', { class: 'arc-logo', html: icon('play', 18) }), h('b', {}, 'Arcade'), h('div', { class: 'grow' }), search),
       h('div', { class: 'arc-scroll' },
-        h('div', { class: 'arc-hero' }, h('div', {}, h('h2', {}, 'Play, learn, have fun'), h('p', {}, `${CATALOG.length} games · light on your computer · scores saved in your box`)),
+        h('div', { class: 'arc-hero' }, h('div', {}, h('h2', {}, 'Play, learn, have fun'), h('p', {}, `${GAME_COUNT} different games · each with its own levels · light on your computer · scores saved in your box`)),
           h('div', { class: 'arc-hero-emoji' }, '🎮🧩🎈')),
         chips,
         recent.length && S.cat === 'all' && !S.q ? h('div', { class: 'arc-sec' }, h('small', {}, 'Continue playing'), h('div', { class: 'arc-recent' }, recent.map(tile))) : null,
@@ -51,6 +53,7 @@ function mount(win, args) {
     sfx('pop');
     S.game = e;
     win.setTitle(e.title);
+    if (e.engine === 'app') { recordPlay(e.id); return launch(e.params.app, e.params.args || {}); }
     if (e.engine === 'web' || e.engine === 'info') return openWeb(e);
     try {
       const mod = await loadEngine(e.engine.split(':')[0]);
@@ -86,4 +89,4 @@ function mount(win, args) {
   return hub().then(() => { if (args.game) win.reopen(args); });
 }
 
-register({ id: 'arcade', name: 'Arcade', icon: 'play', color: '#ff5d8f', grad: 'linear-gradient(135deg,#ffb86b,#ff4f9a)', size: [980, 680], mount, blurb: `${CATALOG.length} games for everyone` });
+register({ id: 'arcade', name: 'Arcade', icon: 'play', color: '#ff5d8f', grad: 'linear-gradient(135deg,#ffb86b,#ff4f9a)', size: [980, 680], mount, blurb: `${GAME_COUNT} games for everyone` });

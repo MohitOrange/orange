@@ -11,6 +11,7 @@ import { radial, closeRadial, radialOpen } from './radial.js';
 import { openItem, PLACES, trashPaths } from './apps/files.js';
 import { collect, uploadAll, pick } from './transfer.js';
 import { SHORTCUTS, ACCENTS } from './apps/settings.js';
+import { hostApps, openHostApp } from './apps/computer.js';
 
 const WALLS = ['juice', 'grove', 'dusk', 'ink'];
 const dateStr = (o = { weekday: 'long', day: 'numeric', month: 'long' }) => new Date().toLocaleDateString([], o);
@@ -174,7 +175,7 @@ function renderCorners() {
 }
 
 function launcherFan() {
-  const list = ['files', 'arcade', 'learn', 'paint', 'studio', 'settings'].filter(id => apps[id]);
+  const list = ['files', 'computer', 'arcade', 'learn', 'divyanik', 'paint'].filter(id => apps[id]);
   radial({ x: 0, y: innerHeight, mode: 'corner', title: 'Apps', items: [
     ...list.map(id => ({ label: apps[id].name, icon: apps[id].icon, hint: apps[id].blurb, run: () => launch(id, {}, $('.c-bl')) })),
     { label: 'All apps', icon: 'grid', hint: 'or just type', run: () => openZest('') },
@@ -385,7 +386,10 @@ function openZest(prefill = '') {
         const res = await api.get('search', { q });
         if (id !== reqId) return;
         const shown = new Set(placeRows.map(r => r.path));
-        rows = [...out, ...res.items.filter(it => !shown.has(it.path)).slice(0, 12).map(it => { const k = kindOf(it.name, it.dir); return { group: 'In your box', title: it.name, sub: it.dir ? it.path : dirname(it.path) + ' · ' + fmtSize(it.size), icon: KIND[k].icon, color: KIND[k].color, run: () => openItem(it) }; })];
+        let pcRows = [];
+        try { pcRows = (await hostApps()).apps.map(a => ({ s: score(a.name, q), group: 'On this computer', title: a.name, sub: `${a.group} · opens outside the box`, icon: 'laptop', grad: 'linear-gradient(135deg,#80deea,#3949ab)', run: () => openHostApp(a) })).filter(r => r.s >= 50).sort((a, b) => b.s - a.s).slice(0, 4); } catch { /* no app list */ }
+        if (id !== reqId) return;
+        rows = [...out, ...pcRows, ...res.items.filter(it => !shown.has(it.path)).slice(0, 12).map(it => { const k = kindOf(it.name, it.dir); return { group: 'In your box', title: it.name, sub: it.dir ? it.path : dirname(it.path) + ' · ' + fmtSize(it.size), icon: KIND[k].icon, color: KIND[k].color, run: () => openItem(it) }; })];
         render();
       } catch { /* ignore */ }
     }

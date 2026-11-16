@@ -4,7 +4,7 @@ import { rand, pick, shuffle, PALETTE } from '../engine.js';
 
 const timers = new Set();
 const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
-const stopAll = () => { timers.forEach(clearTimeout); timers.clear(); };
+export const stopAll = () => { timers.forEach(clearTimeout); timers.clear(); };
 
 export const WORDS = {
   animals: [['CAT', '🐱'], ['DOG', '🐶'], ['COW', '🐮'], ['PIG', '🐷'], ['FOX', '🦊'], ['LION', '🦁'], ['BEAR', '🐻'], ['FROG', '🐸'], ['DUCK', '🦆'], ['FISH', '🐟'], ['GOAT', '🐐'], ['HORSE', '🐴'], ['TIGER', '🐯'], ['ZEBRA', '🦓'], ['MONKEY', '🐵'], ['RABBIT', '🐰'], ['TURTLE', '🐢'], ['PARROT', '🦜'], ['ELEPHANT', '🐘'], ['GIRAFFE', '🦒']],
@@ -14,7 +14,7 @@ export const WORDS = {
 };
 
 // Generic multiple-choice quiz screen used by many learning games
-function quiz(G, el, { rounds = 10, make, columns = 2, speak }) {
+export function quiz(G, el, { rounds = 10, make, columns = 2, speak }) {
   let n = 0, right = 0;
   const qEl = h('div', { class: 'qz-q' }), opts = h('div', { class: 'qz-opts', style: { gridTemplateColumns: `repeat(${columns},1fr)` } });
   const prog = h('div', { class: 'qz-prog' }, h('i'));
@@ -41,7 +41,7 @@ function quiz(G, el, { rounds = 10, make, columns = 2, speak }) {
   };
   next();
 }
-const choices = (correct, wrongGen, k = 4) => { const s = new Set([correct]); let guard = 0; while (s.size < k && guard++ < 200) s.add(wrongGen()); return shuffle([...s]); };
+export const choices = (correct, wrongGen, k = 4) => { const s = new Set([correct]); let guard = 0; while (s.size < k && guard++ < 200) s.add(wrongGen()); return shuffle([...s]); };
 
 // ================================================================ Maths
 export const math = {

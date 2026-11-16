@@ -12,21 +12,22 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 export const DEFAULTS = {
   theme: 'night', accent: 'orange', wallpaper: 'juice', wallpaperPath: '', motion: reduced ? 'calm' : 'full',
   sound: true, autolock: 10, immersive: true, tourDone: false, view: 'grid', windows: {}, session: [],
-  hotCorners: false, pinned: ['files', 'arcade', 'learn', 'paint', 'studio', 'code', 'terminal', 'lens', 'monitor', 'settings'],
-  gameHud: false, pinnedVersion: 3,
+  hotCorners: false, pinned: ['files', 'computer', 'arcade', 'learn', 'divyanik', 'paint', 'studio', 'code', 'terminal', 'monitor', 'settings'],
+  gameHud: false, pinnedVersion: 4,
 };
-const NEW_IN_3 = ['arcade', 'learn', 'paint', 'studio', 'monitor'];
+const NEW_APPS = [[3, ['arcade', 'learn', 'paint', 'studio', 'monitor']], [4, ['computer', 'divyanik']]];
 
 export async function loadSettings() {
   let s = {};
   try { s = await api.get('settings'); } catch { /* first run */ }
   state.settings = { ...DEFAULTS, ...s };
   // Boxes made before Orange 3 keep their own rail, with the new apps added once.
-  if ((state.settings.pinnedVersion || 0) < 3) {
+  const had = state.settings.pinnedVersion || 0;
+  if (had < 4) {
     const pin = [...(state.settings.pinned || [])];
-    for (const id of NEW_IN_3) if (!pin.includes(id)) pin.splice(Math.min(pin.length, 1 + NEW_IN_3.indexOf(id)), 0, id);
+    for (const [v, ids] of NEW_APPS) if (had < v) ids.forEach((id, i) => { if (!pin.includes(id)) pin.splice(Math.min(pin.length, 1 + i), 0, id); });
     state.settings.pinned = pin;
-    state.settings.pinnedVersion = 3;
+    state.settings.pinnedVersion = 4;
     api.post('settings', state.settings).catch(() => {});
   }
   applyLook();
@@ -180,7 +181,10 @@ const P = {
   save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/>',
   studio: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 10l-2 2 2 2M16 10l2 2-2 2M13 9l-2 6"/>',
   monitor: '<path d="M3 12h4l3-8 4 16 3-8h4"/><rect x="2" y="2" width="20" height="20" rx="4" opacity=".0"/>',
-  db: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  laptop: '<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 19h20M10 16.5h4"/>',
+  quest: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  pen: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',
+    db: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
 };
 export function icon(name, size = 18, cls = '') {
   return `<svg class="ico ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.file}</svg>`;

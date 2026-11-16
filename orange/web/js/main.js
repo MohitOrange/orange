@@ -11,6 +11,8 @@ import './apps/learn.js';
 import './apps/paint.js';
 import './apps/studio.js';
 import './apps/monitor.js';
+import './apps/computer.js';
+import './apps/divyanik.js';
 import { start } from './desktop.js';
 
 history.replaceState(null, '', '/');   // drop the one-time secret from the address

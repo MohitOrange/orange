@@ -16,10 +16,10 @@ let store = null, saveT;
 export async function loadScores() {
   if (store) return store;
   try { store = await api.get('kv', { key: 'arcade' }); } catch { store = {}; }
-  store.best ||= {}; store.plays ||= {}; store.recent ||= [];
+  store.best ||= {}; store.plays ||= {}; store.recent ||= []; store.mode ||= {}; store.data ||= {};
   return store;
 }
-function saveScores() { clearTimeout(saveT); saveT = setTimeout(() => api.post('kv', { key: 'arcade', value: store }).catch(() => {}), 600); }
+export function saveScores() { clearTimeout(saveT); saveT = setTimeout(() => api.post('kv', { key: 'arcade', value: store }).catch(() => {}), 600); }
 export function recordPlay(id) {
   if (!store) return;
   store.plays[id] = (store.plays[id] || 0) + 1;
@@ -27,6 +27,16 @@ export function recordPlay(id) {
   saveScores();
 }
 export function best(id) { return store?.best?.[id] || 0; }
+// The level (mode) last chosen for a game, and the key its best score is kept under.
+export const modeOf = e => (e.modes ? Math.min(store?.mode?.[e.id] || 0, e.modes.length - 1) : 0);
+export const bestKey = (e, mi = modeOf(e)) => e.id + (mi ? `#${mi}` : '');
+// Move best scores saved under the old one-tile-per-variant ids to the new game#level keys.
+export function migrateScores(catalog) {
+  if (!store || store.migrated3) return;
+  for (const e of catalog) (e.modes || []).forEach((m, i) => { const old = m[2]; if (old && store.best[old] && !store.best[bestKey(e, i)]) store.best[bestKey(e, i)] = store.best[old]; });
+  store.recent = store.recent.map(id => catalog.find(e => e.id === id || (e.modes || []).some(m => m[2] === id))?.id).filter(Boolean);
+  store.recent = [...new Set(store.recent)]; store.migrated3 = true; saveScores();
+}
 function setBest(id, v, lowerIsBetter) {
   const b = store.best[id];
   if (!b || (lowerIsBetter ? v < b : v > b)) { store.best[id] = v; saveScores(); return true; }
@@ -48,16 +58,19 @@ const mb = n => n == null ? '–' : (n / 1048576).toFixed(0) + ' MB';
 export function runGame(root, entry, mod, win, onExit) {
   const game = mod[entry.engine.split(':')[1]];
   const scoreEl = h('b', { class: 'gm-score' }, '0');
-  const bestEl = h('span', { class: 'gm-best' }, best(entry.id) ? `best ${best(entry.id)}` : '');
+  const modes = entry.modes || null;
+  let mi = modeOf(entry);
+  const bestEl = h('span', { class: 'gm-best' }, best(bestKey(entry, mi)) ? `best ${best(bestKey(entry, mi))}` : '');
   const extraEl = h('span', { class: 'gm-extra' });
   const perf = h('div', { class: 'gm-perf', hidden: !state.settings.gameHud });
   const stage = h('div', { class: 'gm-stage' });
   const overlay = h('div', { class: 'gm-over' });
   const btn = (i, t, fn) => h('button', { class: 'tbtn', title: t, 'aria-label': t, html: icon(i), onclick: fn });
   const pauseBtn = btn('pause', 'Pause (P)', () => (paused ? resume() : pause(true)));
+  const titleEl = h('b', { class: 'gm-title' }, entry.title + (modes ? ` · ${modes[mi][0]}` : ''));
   const bar = h('header', { class: 'tb gm-bar', 'data-drag': '' },
     btn('left', 'Back to Arcade', () => exit()),
-    h('span', { class: 'gm-ico', style: { '--c': entry.color } }, entry.icon), h('b', { class: 'gm-title' }, entry.title),
+    h('span', { class: 'gm-ico', style: { '--c': entry.color } }, entry.icon), titleEl,
     h('div', { class: 'grow' }), extraEl, h('span', { class: 'gm-lbl' }, 'score'), scoreEl, bestEl,
     pauseBtn, btn('rotate', 'Restart (R)', () => restart()),
     btn('motion', 'Performance overlay', () => { state.settings.gameHud = !state.settings.gameHud; perf.hidden = !state.settings.gameHud; }));
@@ -65,7 +78,7 @@ export function runGame(root, entry, mod, win, onExit) {
 
   let canvas, c, dpr, raf = 0, last = 0, paused = true, over = false, frames = 0, fpsT = 0, fps = 0, alive = true, G;
   const kind = game.kind || 'canvas';
-  const params = entry.params || {};
+  let params = { ...(entry.params || {}), ...(modes ? modes[mi][1] : {}) };
 
   const show = (title, sub, label, fn, extra) => {
     overlay.replaceChildren(h('div', { class: 'gm-card' },
@@ -74,6 +87,18 @@ export function runGame(root, entry, mod, win, onExit) {
     overlay.hidden = false;
     setTimeout(() => overlay.querySelector('.gm-go')?.focus(), 30);
   };
+
+  const how = () => params.how || entry.how || game.how || 'Tap or use the arrow keys.';
+  // Level chips: every variant of a game lives on its start card instead of being a separate tile.
+  const chips = () => modes && h('div', { class: 'gm-modes' }, modes.map(([label], i) => h('button', { class: 'gm-mode' + (i === mi ? ' on' : ''), onclick: () => setMode(i) }, label)));
+  function setMode(i) {
+    mi = i; params = { ...(entry.params || {}), ...modes[i][1] };
+    if (store) { store.mode[entry.id] = i; saveScores(); }
+    titleEl.textContent = `${entry.title} · ${modes[i][0]}`;
+    bestEl.textContent = best(bestKey(entry, mi)) ? `best ${best(bestKey(entry, mi))}` : '';
+    sfx('tick'); start(); intro();
+  }
+  function intro() { show(entry.title, how(), 'Play', resume, chips()); }
 
   function makeApi() {
     const api2 = {
@@ -86,6 +111,8 @@ export function runGame(root, entry, mod, win, onExit) {
       lose(msg) { finish(false, msg); },
       color: i => PALETTE[i % PALETTE.length],
       w: game.w || 360, h: game.h || 640,
+      data: store ? (store.data[entry.id] ||= {}) : {},
+      save: () => saveScores(),
     };
     return api2;
   }
@@ -94,10 +121,10 @@ export function runGame(root, entry, mod, win, onExit) {
     if (over) return;
     over = true; paused = true; cancelAnimationFrame(raf);
     const low = !!game.lowerIsBetter;
-    const isBest = (G.score > 0 || low) && setBest(entry.id, G.score, low);
-    bestEl.textContent = `best ${best(entry.id)}`;
+    const isBest = (G.score > 0 || low) && setBest(bestKey(entry, mi), G.score, low);
+    bestEl.textContent = `best ${best(bestKey(entry, mi))}`;
     sfx(won ? 'ok' : 'error');
-    show(won ? 'You did it!' : 'Game over', `${msg || ''}${msg ? ' · ' : ''}Score ${G.score}${isBest ? ' · new best! 🏆' : ''}`, 'Play again', restart);
+    show(won ? 'You did it!' : 'Game over', `${msg || ''}${msg ? ' · ' : ''}Score ${G.score}${isBest ? ' · new best! 🏆' : ''}`, 'Play again', restart, chips());
   }
 
   function resize() {
@@ -214,7 +241,7 @@ export function runGame(root, entry, mod, win, onExit) {
 
   recordPlay(entry.id);
   start();
-  show(entry.title, entry.how || game.how || 'Tap or use the arrow keys.', 'Play', resume);
+  intro();
   if (state.settings.gameHud) updatePerf();
   return { destroy, pause: () => pause(true) };
 }
